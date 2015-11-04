@@ -6,6 +6,9 @@
 #include <NewPing.h>
 #include <Wire.h>
 #include <MemoryFree.h>
+//#include <avr/wdt.h>
+//#include <avr/io.h>
+//#include <avr/interrupt.h>
 ///////////////////////////////////////////////////////////////////////////////////
 //***************************GLOBAL VARIABLES & DEFINES***************************//
 ///////////////////////////////////////////////////////////////////////////////////
@@ -17,7 +20,7 @@ boolean output_errors = false;  // true or false
 
 //Drive pin numbers
 #define FORWARD_PIN 5
-#define REVERSE_PIN 6   
+#define REVERSE_PIN 6
 #define STEERING_SERVO_PIN 3
 #define TEST_LED_PIN 13
 #define BATTERY_MONITOR_PIN A7
@@ -46,14 +49,16 @@ NewPing sonar[SONAR_NUM] =       // Sensor object array.
   NewPing(4, 2, MAX_DISTANCE),
 };
 //IMU
-#define OUTPUT__DATA_INTERVAL 50
+#define OUTPUT__DATA_INTERVAL 35
+//TODO remove the define
+#define HW__VERSION_CODE 10724 // SparkFun "9DOF Sensor Stick" version "SEN-10724" (HMC5883L magnetometer)
 long lastPoll = 0;
 // Accelerometer
 // "accel x,y,z (min/max) = X_MIN/X_MAX  Y_MIN/Y_MAX  Z_MIN/Z_MAX"
-#define ACCEL_X_MIN ((float) -282)
-#define ACCEL_X_MAX ((float) 257)
-#define ACCEL_Y_MIN ((float) -278)
-#define ACCEL_Y_MAX ((float) 257)
+#define ACCEL_X_MIN ((float) -283)
+#define ACCEL_X_MAX ((float) 247)
+#define ACCEL_Y_MIN ((float) -258)
+#define ACCEL_Y_MAX ((float) 270)
 #define ACCEL_Z_MIN ((float) -297)
 #define ACCEL_Z_MAX ((float) 238)
 
@@ -71,13 +76,14 @@ long lastPoll = 0;
 #define CALIBRATION__MAGN_USE_EXTENDED true
 const float magn_ellipsoid_center[3] = {61.1818, 17.4708, -281.550};
 const float magn_ellipsoid_transform[3][3] = {{0.913998, 0.00713610, -0.0348895},
-                                              {0.00713610, 0.873824, 0.0566169},
-                                              {-0.0348895, 0.0566169, 0.962865}};
+  {0.00713610, 0.873824, 0.0566169},
+  { -0.0348895, 0.0566169, 0.962865}
+};
 // Gyroscope
 // "gyro x,y,z (current/average) = 41.00/-41.93  -26.00/-26.52  5.00/4.26
-#define GYRO_AVERAGE_OFFSET_X ((float) -41.93)
-#define GYRO_AVERAGE_OFFSET_Y ((float) -26.52)
-#define GYRO_AVERAGE_OFFSET_Z ((float) 4.26)
+#define GYRO_AVERAGE_OFFSET_X ((float) -42.88)
+#define GYRO_AVERAGE_OFFSET_Y ((float) -29.52)
+#define GYRO_AVERAGE_OFFSET_Z ((float) 7.08)
 
 // Sensor calibration scale and offset values
 #define ACCEL_X_OFFSET ((ACCEL_X_MIN + ACCEL_X_MAX) / 2.0f)
@@ -126,12 +132,12 @@ int gyro_num_samples = 0;
 
 // DCM variables
 float MAG_Heading;
-float Accel_Vector[3]= {0, 0, 0}; // Store the acceleration in a vector
-float Gyro_Vector[3]= {0, 0, 0}; // Store the gyros turn rate in a vector
-float Omega_Vector[3]= {0, 0, 0}; // Corrected Gyro_Vector data
-float Omega_P[3]= {0, 0, 0}; // Omega Proportional correction
-float Omega_I[3]= {0, 0, 0}; // Omega Integrator
-float Omega[3]= {0, 0, 0};
+float Accel_Vector[3] = {0, 0, 0}; // Store the acceleration in a vector
+float Gyro_Vector[3] = {0, 0, 0}; // Store the gyros turn rate in a vector
+float Omega_Vector[3] = {0, 0, 0}; // Corrected Gyro_Vector data
+float Omega_P[3] = {0, 0, 0}; // Omega Proportional correction
+float Omega_I[3] = {0, 0, 0}; // Omega Integrator
+float Omega[3] = {0, 0, 0};
 float errorRollPitch[3] = {0, 0, 0};
 float errorYaw[3] = {0, 0, 0};
 float DCM_Matrix[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
@@ -150,7 +156,7 @@ float G_Dt; // Integration time for DCM algorithm
 
 // More output-state variables
 boolean output_stream_on;
-boolean output_single_on; 
+boolean output_single_on;
 int curr_calibration_sensor = 0;
 boolean reset_calibration_session_flag = true;
 int num_accel_errors = 0;
@@ -165,17 +171,17 @@ Servo steeringServo;
 void setup()
 {
   Serial.begin(57600);
-
+  //wdt_enable(WDTO_1S);
   pingTimer[0] = millis() + 100;           // First ping starts at 100ms, gives time for the Arduino to chill before starting.
   for (uint8_t i = 1; i < SONAR_NUM; i++) // Set the starting time for each sensor.
     pingTimer[i] = pingTimer[i - 1] + PING_INTERVAL;
-  
+
   delay(50);  // Give sensors enough time to start
   I2C_Init();
   Accel_Init();
   Magn_Init();
   Gyro_Init();
-  
+
   // Read sensors, init DCM algorithm
   delay(20);  // Give sensors enough time to collect data
   reset_sensor_fusion();
@@ -195,70 +201,61 @@ void setup()
 ///////////////////////////////////////////////////////////////////////////////////
 //**************************************LOOP**************************************//
 ///////////////////////////////////////////////////////////////////////////////////
+//long last = 0;
 void loop()
 {
-  if((millis() - timestamp) >= OUTPUT__DATA_INTERVAL)
+  //wdt_reset();
+
+  if ((millis() - timestamp) >= OUTPUT__DATA_INTERVAL)
   {
     timestamp_old = timestamp;
     timestamp = millis();
     if (timestamp > timestamp_old)
       G_Dt = (float) (timestamp - timestamp_old) / 1000.0f; // Real time of loop run. We use this on the DCM algorithm (gyro integration time)
-    else 
+    else
       G_Dt = 0;
     Serial.println(poll());
+    //    poll();
+    //    Serial.println(millis()-last);
+    //    last = millis();
   }
-  
+
   while (Serial.available() > 0)
   {
     char recieved = Serial.read();
     String inData = "";
-    
+    Serial.println("I have recieved!");
     if (recieved == 'c')
     {
-      /*
-      while (recieved != '\n')
-      {
-        recieved = (char) Serial.read();
-        if(recieved != (char)-1)
-          inData += recieved;
-      }
-      if(inData.length() < 5)
-        Serial.println("Too small");
-      
-      Serial.println(inData);
-      */
-      
-      //digitalWrite(TEST_LED_PIN,HIGH);
-//      Serial.println(poll());
       // Process message when new line character is recieved
       while (recieved != ',' && recieved != '\n')
       {
         recieved = (char) Serial.read();
-        if(recieved != (char)-1)
+        if (recieved != (char) - 1)
           inData += recieved;
       }
       int steeringDirection = inData.toInt();
-//      Serial.println(steeringDirection);
-      
+      //      Serial.println(steeringDirection);
+
       inData = "";
       recieved = 'c';
       while (recieved != ',' && recieved != '\n')
       {
         recieved = (char) Serial.read();
-        if(recieved != (char)-1)
+        if (recieved != (char) - 1)
           inData += recieved;
       }
       int drivePower = inData.toInt();
-      
+
       inData = "";
       recieved = 'c';
       while (recieved != ',' && recieved != '\n')
       {
         recieved = (char) Serial.read();
-        if(recieved != (char)-1)
+        if (recieved != (char) - 1)
           inData += recieved;
       }
-      
+
       switch (inData.toInt())
       {
         case 0:
@@ -267,43 +264,35 @@ void loop()
           stopMove();
           break;
       }
-//      Serial.println(drivePower);
       inData = "";
-      
-      instruct(steeringDirection,drivePower);
+
+      instruct(steeringDirection, drivePower);
       serialFlush();
-      
+
     }
-/*
-    if (recieved == 'p')
-    {
-      String reading = poll();
-//      Serial.println(reading);
-    }
-*/
+
   }
-  //delay(10);
-  
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 //******************************NECESSARY FUNCTIONS******************************//
 ///////////////////////////////////////////////////////////////////////////////////
 //Clear the incoming buffer
-void serialFlush(){
-  while(Serial.available() > 0) {
+void serialFlush() {
+  while (Serial.available() > 0) {
     char t = Serial.read();
   }
 }
-
+float oldAccel[2] = {0, 0}; //x,y
 String poll()
 {
-//  ultra(); 
-//  while(front == 0 || left == 0 || right == 0 || rear == 0)
-//  {
-//    ultra();
-//  }
-  
+  ultra();
+  while (front == 0 || left == 0 || right == 0 || rear == 0)
+  {
+    ultra();
+  }
+
   updateBatteryLevel();
   Read_Gyro(); // Read gyroscope
   Read_Accel(); // Read accelerometer
@@ -333,33 +322,39 @@ String poll()
   msg.concat(",");
   msg.concat(timeBetweenPoll);
   msg.concat(",");
-  msg.concat(roll);
+  msg.concat(oldAccel[0]);
   msg.concat(",");
-  msg.concat(pitch);
+  msg.concat(oldAccel[1]);
   msg.concat(",");
   msg.concat(accel[0]);
   msg.concat(",");
   msg.concat(accel[1]);
   msg.concat(",");
   msg.concat(batteryLevel);
+  oldAccel[0] = accel[0];
+  oldAccel[1] = accel[1];
   return msg;
 }
 
 void instruct(int dir, int power)//direction (-10 to 10) power 0 to 100
 {
   if (power > 0)
-    forward(map(power,0,100,90,255));
+    forward(map(power, 0, 100, 90, 255));
   else if (power == 0)
     forward(0);
   else
-    reverse(map(abs(power),0,100,90,255));
-  steeringServo.write(map(dir,-10,10,85,65));
+    reverse(map(abs(power), 0, 100, 90, 255));
+  steeringServo.write(map(dir, -10, 10, 85, 65));
 }
 
 void updateBatteryLevel()
 {
-  batteryLevel = map(analogRead(BATTERY_MONITOR_PIN),0,1024,0,1024);
+  batteryLevel = map(analogRead(BATTERY_MONITOR_PIN), 0, 1024, 0, 1024);
 }
 
+void software_Reset() // Restarts program from beginning but does not reset the peripherals and registers
+{
+asm volatile ("  jmp 0");  
+} 
 
 

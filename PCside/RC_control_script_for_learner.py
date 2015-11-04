@@ -2,7 +2,7 @@ import pygame
 import serial
 import time
 
-ser = serial.Serial('COM9', 57600)
+ser = serial.Serial('COM11', 57600)
 ser.timeout = None
 ser.write("j")
 time.sleep(3)
@@ -21,9 +21,11 @@ print name
 axes = joystick.get_numaxes()
 buttons = joystick.get_numbuttons()
 
+lastCommand = ""
+
 while done==False:
-    joystick = pygame.joystick.Joystick(0)
-    joystick.init()
+    #joystick = pygame.joystick.Joystick(0)
+    #joystick.init()
  
     count = pygame.event.get()
                    
@@ -59,8 +61,12 @@ while done==False:
         command += "0"
     
     command += "\n"
-    ser.write(command)
-    
+    #send command if it is different from the last command
+    if (command != lastCommand):
+        ser.write(command)
+        print command
+        lastCommand = command
+        
     #button 12 for quit
     #ser.flushOutput()
     if joystick.get_button(12):
@@ -69,6 +75,6 @@ while done==False:
         done = True
 
     #print command
-    #print ser.readline()
+    print ser.readline()
     time.sleep(.01)
 pygame.quit()
