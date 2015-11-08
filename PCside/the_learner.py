@@ -141,23 +141,26 @@ while done==False:
     currentAngle = yaw
  
     #update position
+    #assuming the accelerometers readings on the X-axis are the current
+    #acceleration of the car since that is in the direction of its motion
+    #X from the car is the direction that the robot is pointing 
     newAccX = (sensor_readings[9] / 255.0) * 980
-    newAccY = (sensor_readings[10] / 255.0) * 980
-    newAcc = math.sqrt(newAccX**2 + newAccY**2)
+    #newAccY = (sensor_readings[10] / 255.0) * 980
+    #newAcc = math.sqrt(newAccX**2 + newAccY**2)
     oldAccX = (sensor_readings[7] / 255.0) * 980
-    oldAccY = (sensor_readings[8] / 255.0) * 980
-    oldAcc = math.sqrt(oldAccX**2 + oldAccY**2)
+    #oldAccY = (sensor_readings[8] / 255.0) * 980
+    #oldAcc = math.sqrt(oldAccX**2 + oldAccY**2)
 
     timeSinceLastPoll = sensor_readings[6]/1000.0
     print ("timeSinceLastPoll " +str(timeSinceLastPoll))
 
     newVelocityX = integrateTrapezoid(oldAccX,newAccX,timeSinceLastPoll)
-    newVelocityY = integrateTrapezoid(oldAccY,newAccY,timeSinceLastPoll)
+    #newVelocityY = integrateTrapezoid(oldAccY,newAccY,timeSinceLastPoll)
     displacementX = integrateTrapezoid(oldVelocityX,newVelocityX,
                                        timeSinceLastPoll)
-    displacementY = integrateTrapezoid(oldVelocityY,newVelocityY,
-                                       timeSinceLastPoll)
-    robot.pos = vector((math.sin(yaw)*displacementX)+mybox.x
+    #displacementY = integrateTrapezoid(oldVelocityY,newVelocityY,
+    #                                   timeSinceLastPoll)
+    robot.pos = vector((math.sin (yaw)*displacementX)+mybox.x
                        +(math.sin(yaw+(math.pi/2))*displacementX),
                        (math.cos(yaw)*displacementY)+mybox.y
                        +(math.cos(yaw+(math.pi/2))*displacementY),0)    
@@ -186,7 +189,6 @@ while done==False:
     #print command
     command += ","
 
-    
     if joystick.get_axis(4) > joystick.get_axis(5):
         command += str(int((joystick.get_axis(4) +1) * 50.5 ))
         #print command
