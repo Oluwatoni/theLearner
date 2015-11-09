@@ -160,10 +160,8 @@ while done==False:
                                        timeSinceLastPoll)
     #displacementY = integrateTrapezoid(oldVelocityY,newVelocityY,
     #                                   timeSinceLastPoll)
-    robot.pos = vector((math.sin (yaw)*displacementX)+mybox.x
-                       +(math.sin(yaw+(math.pi/2))*displacementX),
-                       (math.cos(yaw)*displacementY)+mybox.y
-                       +(math.cos(yaw+(math.pi/2))*displacementY),0)    
+    robot.pos = vector((math.sin (yaw)*displacementX)+mybox.x,
+                       (math.cos(yaw)*displacementX)+mybox.y,0)    
     
     '''
     newVelocity = integrateTrapezoid(oldAcc,newAcc,timeSinceLastPoll)
