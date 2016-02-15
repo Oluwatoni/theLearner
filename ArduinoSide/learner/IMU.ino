@@ -1,3 +1,6 @@
+/* This file is part of the Razor AHRS Firmware */
+
+
 
 
 // I2C code to read the sensors
@@ -20,60 +23,6 @@
 void I2C_Init()
 {
   Wire.begin();
-}
-
-void reset_sensor_fusion() {
-  float temp1[3];
-  float temp2[3];
-  float xAxis[] = {1.0f, 0.0f, 0.0f};
-
-  Read_Gyro(); // Read gyroscope
-  Read_Accel(); // Read accelerometer
-  Read_Magn(); // Read magnetometer
-  timestamp = millis();
-  
-  // GET PITCH
-  // Using y-z-plane-component/x-component of gravity vector
-  pitch = -atan2(accel[0], sqrt(accel[1] * accel[1] + accel[2] * accel[2]));
-	
-  // GET ROLL
-  // Compensate pitch of gravity vector 
-  Vector_Cross_Product(temp1, accel, xAxis);
-  Vector_Cross_Product(temp2, xAxis, temp1);
-  // Normally using x-z-plane-component/y-component of compensated gravity vector
-  // roll = atan2(temp2[1], sqrt(temp2[0] * temp2[0] + temp2[2] * temp2[2]));
-  // Since we compensated for pitch, x-z-plane-component equals z-component:
-  roll = atan2(temp2[1], temp2[2]);
-  
-  // GET YAW
-  Compass_Heading();
-  yaw = MAG_Heading;
-  
-  // Init rotation matrix
-  init_rotation_matrix(DCM_Matrix, yaw, pitch, roll);
-}
-
-void compensate_sensor_errors() {
-    // Compensate accelerometer error
-    accel[0] = (accel[0] - ACCEL_X_OFFSET) * ACCEL_X_SCALE;
-    accel[1] = (accel[1] - ACCEL_Y_OFFSET) * ACCEL_Y_SCALE;
-    accel[2] = (accel[2] - ACCEL_Z_OFFSET) * ACCEL_Z_SCALE;
-
-    // Compensate magnetometer error
-#if CALIBRATION__MAGN_USE_EXTENDED == true
-    for (int i = 0; i < 3; i++)
-      magnetom_tmp[i] = magnetom[i] - magn_ellipsoid_center[i];
-    Matrix_Vector_Multiply(magn_ellipsoid_transform, magnetom_tmp, magnetom);
-#else
-    magnetom[0] = (magnetom[0] - MAGN_X_OFFSET) * MAGN_X_SCALE;
-    magnetom[1] = (magnetom[1] - MAGN_Y_OFFSET) * MAGN_Y_SCALE;
-    magnetom[2] = (magnetom[2] - MAGN_Z_OFFSET) * MAGN_Z_SCALE;
-#endif
-
-    // Compensate gyroscope error
-    gyro[0] -= GYRO_AVERAGE_OFFSET_X;
-    gyro[1] -= GYRO_AVERAGE_OFFSET_Y;
-    gyro[2] -= GYRO_AVERAGE_OFFSET_Z;
 }
 
 void Accel_Init()
@@ -282,7 +231,5 @@ void Compass_Heading()
   // Tilt compensated magnetic field Y
   mag_y = magnetom[1] * cos_roll - magnetom[2] * sin_roll;
   // Magnetic Heading
-//  Serial.println(mag_y);
-//  Serial.println(mag_x);
   MAG_Heading = atan2(-mag_y, mag_x);
 }

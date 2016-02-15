@@ -1,3 +1,4 @@
+/* This file is part of the Razor AHRS Firmware */
 
 // Computes the dot product of two vectors
 float Vector_Dot_Product(const float v1[3], const float v2[3])
@@ -85,65 +86,4 @@ void init_rotation_matrix(float m[3][3], float yaw, float pitch, float roll)
   m[2][0] = -s2;
   m[2][1] = c2 * s1;
   m[2][2] = c1 * c2;
-}
-
-//Returns median of an array
-int getMedian(int (&myArray)[PRECISE])//fixxx
-{
-  int highest = 0, highestIndex = 0, count = 0;
-  int sort [PRECISE] = {};
-  int sorted [PRECISE] = {};
-  int sortedFreq [PRECISE] = {};
-  bool notSame = true;
-
-  for (int i = 0; i < PRECISE; i++)
-  {
-    if (myArray[0] != myArray[i])
-      notSame = false;
-  }
-
-  if (notSame)
-  {
-    for (int i = 0; i < PRECISE; i++)
-    {
-      if (myArray[i] > highest)
-      {
-        highest = myArray[i];
-        highestIndex = i;
-      }
-    }
-
-    for (int k = 0; k < highest; k++)
-    {
-      for (int i = 0; i < PRECISE; i++)
-      {
-        if ((highest - k) == myArray[i])
-        {
-          sort[count] = myArray[i];
-          for (int k = 0; k < PRECISE; k++)
-          {
-            if (sort[count] == myArray[k])
-            {
-              sortedFreq[count]++;
-              count++;
-            }
-          }
-        }
-      }
-    }
-    count = 0;
-    for (int i = 0; i < PRECISE; i++)
-    {
-      for (int k = 0; k < sortedFreq[i]; i++)
-      {
-        sorted[count] = sort[i];
-        count++;
-        if (count > (PRECISE - 1))
-          break;
-      }
-    }
-    return sorted[2];
-  }
-  else
-    return myArray[1];
 }

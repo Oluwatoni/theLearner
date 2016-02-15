@@ -1,5 +1,6 @@
+/* This file is part of the Razor AHRS Firmware */
 
-// DCM algorithm
+// Direc-cosine-matrix algorithm
 
 /**************************************************/
 void Normalize(void)
@@ -119,9 +120,8 @@ void Matrix_update(void)
 
 void Euler_angles(void)
 {
-  //roll and pitch were switchedd due to the sensors orientation
-  roll = asin(DCM_Matrix[2][0]);
-  pitch = -atan2(DCM_Matrix[2][1],DCM_Matrix[2][2]);
+  pitch = -asin(DCM_Matrix[2][0]);
+  roll = atan2(DCM_Matrix[2][1],DCM_Matrix[2][2]);
   yaw = atan2(DCM_Matrix[1][0],DCM_Matrix[0][0]);
 }
 

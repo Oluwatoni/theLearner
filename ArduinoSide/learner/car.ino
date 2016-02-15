@@ -1,3 +1,7 @@
+void updateBatteryLevel()
+{
+  batteryLevel = map(analogRead(BATTERY_MONITOR_PIN), 0, 1024, 0, 1024);
+}
 
 void forward(int speedy)
 {
@@ -44,3 +48,13 @@ void softStop()
   digitalWrite(FORWARD_PIN, LOW);
 }
 
+void instruct(int dir, int power)//direction (-100 to 100) power 0 to 100
+{
+  if (power > 0)
+    forward(map(power, 0, 100, 90, 255));
+  else if (power == 0)
+    forward(0);
+  else
+    reverse(map(abs(power), 0, 100, 90, 255));
+  steeringServo.write(map(dir, -100, 100, 85, 65));
+}

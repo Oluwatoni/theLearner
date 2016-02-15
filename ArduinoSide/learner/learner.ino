@@ -1,60 +1,62 @@
-//Oluwatoni Ogunmade
-///////////////////////////////////////////////////////////////////////////////////
-//*********************************LIBRARIES USED*********************************//
-///////////////////////////////////////////////////////////////////////////////////
-#include <Servo.h>
-#include <NewPing.h>
+/*
+  Oluwatoni Ogunmade
+  funmitoni2@yahoo.co.uk
+
+  inspiration below.
+  http://projectsfromtech.blogspot.com/2014/01/i2c-hc-sr04-sonar-module-attiny85-i2c.html
+*/
 #include <Wire.h>
-#include <MemoryFree.h>
-//#include <avr/wdt.h>
-//#include <avr/io.h>
-//#include <avr/interrupt.h>
-///////////////////////////////////////////////////////////////////////////////////
-//***************************GLOBAL VARIABLES & DEFINES***************************//
-///////////////////////////////////////////////////////////////////////////////////
-int direction;
-int batteryLevel;
-
-//TODO remove
-boolean output_errors = false;  // true or false
-
-//Drive pin numbers
+#include <NewPing.h>
+#include <Servo.h>
+//#include <TinyGPS++.h>
+//#include <SoftwareSerial.h>
+//#define DEBUG
+//defines for the ultrasonic sensors
+#define MCU1_I2C 1
+#define MCU2_I2C 2
+#define SONAR_NUM 3
+#define MAX_DISTANCE 250 //in cm
 #define FORWARD_PIN 5
 #define REVERSE_PIN 6
 #define STEERING_SERVO_PIN 3
 #define TEST_LED_PIN 13
 #define BATTERY_MONITOR_PIN A7
-//Ultrasonic setup
-#define SONAR_NUM     4 // Number or sensors.
-#define MAX_DISTANCE 300 // Maximum distance (in cm) to ping.
-#define PING_INTERVAL 30 // Milliseconds between sensor pings (29ms is about the min to avoid cross-sensor echo).
+#define ULTRASONIC_DELAY 16
+byte Distance[7] = {};                            // Where the range data is stored
 
-unsigned long pingTimer[SONAR_NUM]; // Holds the times when the next ping should happen for each sensor.
-unsigned int cm[SONAR_NUM];         // Where the ping distances are stored.
-uint8_t currentSensor = 0;          // Keeps track of which sensor is active.
-int front, left, right, rear, j = 0; //ultrasonic sensor values
-const int PRECISE = 40;
-
-//arrays to sort the raw values from the ultrasonc sensors
-int frontReal[PRECISE] = {};//arrays to sort the raw values from the ultrasonc
-int leftReal[PRECISE] = {};
-int rightReal[PRECISE] = {};
-int rearReal[PRECISE] = {};
+bool direction;
+int batteryLevel;
 
 NewPing sonar[SONAR_NUM] =       // Sensor object array.
 {
-  NewPing(7, 8, MAX_DISTANCE), // Each sensor's trigger pin, echo pin, and max distance to ping.
-  NewPing(A2, A3, MAX_DISTANCE),
-  NewPing(12, 11, MAX_DISTANCE),
-  NewPing(4, 2, MAX_DISTANCE),
+  NewPing(7, 8, MAX_DISTANCE), //ultra 5 // Each sensor's trigger pin, echo pin, and max distance to ping.
+  NewPing(A2, A3, MAX_DISTANCE),//ultra 7
+  NewPing(4, 2, MAX_DISTANCE)//ultra 6
 };
-//IMU
-#define OUTPUT__DATA_INTERVAL 35
-//TODO remove the define
+
+Servo steeringServo;
+
+// #define RX_PIN A1
+// #define TX_PIN A0
+// #define GPS_BAUD 9600
+
+// The TinyGPS++ object
+//TinyGPSPlus gps;
+//SoftwareSerial ss(RX_PIN, TX_PIN);
+
+//IMU defines
 #define HW__VERSION_CODE 10724 // SparkFun "9DOF Sensor Stick" version "SEN-10724" (HMC5883L magnetometer)
-long lastPoll = 0;
-// Accelerometer
-// "accel x,y,z (min/max) = X_MIN/X_MAX  Y_MIN/Y_MAX  Z_MIN/Z_MAX"
+
+// Sensor data output interval in milliseconds
+// This may not work, if faster than 20ms (=50Hz)
+// Code is tuned for 20ms, so better leave it like that
+#define OUTPUT__DATA_INTERVAL 20  // in milliseconds
+
+// If set true, an error message will be output if we fail to read sensor data.
+// Message format: "!ERR: reading <sensor>", followed by "\r\n".
+boolean output_errors = false;  // true or false
+
+// SENSOR CALIBRATION
 #define ACCEL_X_MIN ((float) -283)
 #define ACCEL_X_MAX ((float) 247)
 #define ACCEL_Y_MIN ((float) -258)
@@ -76,14 +78,29 @@ long lastPoll = 0;
 #define CALIBRATION__MAGN_USE_EXTENDED true
 const float magn_ellipsoid_center[3] = {61.1818, 17.4708, -281.550};
 const float magn_ellipsoid_transform[3][3] = {{0.913998, 0.00713610, -0.0348895},
-  {0.00713610, 0.873824, 0.0566169},
-  { -0.0348895, 0.0566169, 0.962865}
-};
+                                              {0.00713610, 0.873824, 0.0566169},
+                                              { -0.0348895, 0.0566169, 0.962865}};
+
 // Gyroscope
-// "gyro x,y,z (current/average) = 41.00/-41.93  -26.00/-26.52  5.00/4.26
+// "gyro x,y,z (current/average) = .../OFFSET_X  .../OFFSET_Y  .../OFFSET_Z
 #define GYRO_AVERAGE_OFFSET_X ((float) -42.88)
 #define GYRO_AVERAGE_OFFSET_Y ((float) -29.52)
 #define GYRO_AVERAGE_OFFSET_Z ((float) 7.08)
+
+
+// DEBUG OPTIONS
+
+// When set to true, gyro drift correction will not be applied
+#define DEBUG__NO_DRIFT_CORRECTION false
+// Print elapsed time after each I/O loop
+#define DEBUG__PRINT_LOOP_TIME false
+
+
+// Check if hardware version code is defined
+#ifndef HW__VERSION_CODE
+// Generate compile error
+#error YOU HAVE TO SELECT THE HARDWARE YOU ARE USING! See "HARDWARE OPTIONS" in "USER SETUP AREA" at top of Razor_AHRS.ino!
+#endif
 
 // Sensor calibration scale and offset values
 #define ACCEL_X_OFFSET ((ACCEL_X_MIN + ACCEL_X_MAX) / 2.0f)
@@ -112,6 +129,7 @@ const float magn_ellipsoid_transform[3][3] = {{0.913998, 0.00713610, -0.0348895}
 #define Ki_YAW 0.00002f
 
 // Stuff
+#define STATUS_LED_PIN 13  // Pin number of status LED
 #define GRAVITY 256.0f // "1G reference" used for DCM filter and accelerometer calibration
 #define TO_RAD(x) (x * 0.01745329252)  // *pi/180
 #define TO_DEG(x) (x * 57.2957795131)  // *180/pi
@@ -163,20 +181,99 @@ int num_accel_errors = 0;
 int num_magn_errors = 0;
 int num_gyro_errors = 0;
 
-Servo steeringServo;
+void read_sensors() {
+  Read_Gyro(); // Read gyroscope
+  Read_Accel(); // Read accelerometer
+  Read_Magn(); // Read magnetometer
+}
 
-///////////////////////////////////////////////////////////////////////////////////
-//*************************************SETUP*************************************//
-///////////////////////////////////////////////////////////////////////////////////
+// Read every sensor and record a time stamp
+// Init DCM with unfiltered orientation
+// TODO re-init global vars?
+
+void reset_sensor_fusion() {
+  float temp1[3];
+  float temp2[3];
+  float xAxis[] = {1.0f, 0.0f, 0.0f};
+
+  read_sensors();
+  timestamp = millis();
+
+  // GET PITCH
+  // Using y-z-plane-component/x-component of gravity vector
+  pitch = -atan2(accel[0], sqrt(accel[1] * accel[1] + accel[2] * accel[2]));
+
+  // GET ROLL
+  // Compensate pitch of gravity vector
+  Vector_Cross_Product(temp1, accel, xAxis);
+  Vector_Cross_Product(temp2, xAxis, temp1);
+  // Normally using x-z-plane-component/y-component of compensated gravity vector
+  // roll = atan2(temp2[1], sqrt(temp2[0] * temp2[0] + temp2[2] * temp2[2]));
+  // Since we compensated for pitch, x-z-plane-component equals z-component:
+  roll = atan2(temp2[1], temp2[2]);
+
+  // GET YAW
+  Compass_Heading();
+  yaw = MAG_Heading;
+
+  // Init rotation matrix
+  init_rotation_matrix(DCM_Matrix, yaw, pitch, roll);
+}
+
+// Apply calibration to raw sensor readings
+void compensate_sensor_errors() {
+  // Compensate accelerometer error
+  accel[0] = (accel[0] - ACCEL_X_OFFSET) * ACCEL_X_SCALE;
+  accel[1] = (accel[1] - ACCEL_Y_OFFSET) * ACCEL_Y_SCALE;
+  accel[2] = (accel[2] - ACCEL_Z_OFFSET) * ACCEL_Z_SCALE;
+
+  // Compensate magnetometer error
+#if CALIBRATION__MAGN_USE_EXTENDED == true
+  for (int i = 0; i < 3; i++)
+    magnetom_tmp[i] = magnetom[i] - magn_ellipsoid_center[i];
+  Matrix_Vector_Multiply(magn_ellipsoid_transform, magnetom_tmp, magnetom);
+#else
+  magnetom[0] = (magnetom[0] - MAGN_X_OFFSET) * MAGN_X_SCALE;
+  magnetom[1] = (magnetom[1] - MAGN_Y_OFFSET) * MAGN_Y_SCALE;
+  magnetom[2] = (magnetom[2] - MAGN_Z_OFFSET) * MAGN_Z_SCALE;
+#endif
+
+  // Compensate gyroscope error
+  gyro[0] -= GYRO_AVERAGE_OFFSET_X;
+  gyro[1] -= GYRO_AVERAGE_OFFSET_Y;
+  gyro[2] -= GYRO_AVERAGE_OFFSET_Z;
+}
+
+// Reset calibration session if reset_calibration_session_flag is set
+void check_reset_calibration_session()
+{
+  // Raw sensor values have to be read already, but no error compensation applied
+
+  // Reset this calibration session?
+  if (!reset_calibration_session_flag) return;
+
+  // Reset acc and mag calibration variables
+  for (int i = 0; i < 3; i++) {
+    accel_min[i] = accel_max[i] = accel[i];
+    magnetom_min[i] = magnetom_max[i] = magnetom[i];
+  }
+
+  // Reset gyro calibration variables
+  gyro_num_samples = 0;  // Reset gyro calibration averaging
+  gyro_average[0] = gyro_average[1] = gyro_average[2] = 0.0f;
+
+  reset_calibration_session_flag = false;
+}
+
+String inputString = "";         // a string to hold incoming data
+boolean stringComplete = false;  // whether the string is complete
+
 void setup()
 {
-  Serial.begin(57600);
-  //wdt_enable(WDTO_1S);
-  pingTimer[0] = millis() + 100;           // First ping starts at 100ms, gives time for the Arduino to chill before starting.
-  for (uint8_t i = 1; i < SONAR_NUM; i++) // Set the starting time for each sensor.
-    pingTimer[i] = pingTimer[i - 1] + PING_INTERVAL;
+  Wire.begin();
 
-  delay(50);  // Give sensors enough time to start
+  // Init sensors
+  delay(100);  // Give sensors enough time to start
   I2C_Init();
   Accel_Init();
   Magn_Init();
@@ -186,8 +283,9 @@ void setup()
   delay(20);  // Give sensors enough time to collect data
   reset_sensor_fusion();
 
-  //Setup for output pins
-  //TODO remove the pin numbers
+  Serial.begin(115200);
+  //  ss.begin(GPS_BAUD);
+
   pinMode(TEST_LED_PIN, OUTPUT);//test
   pinMode(REVERSE_PIN, OUTPUT);//reverse
   pinMode(FORWARD_PIN, OUTPUT);//forward
@@ -198,163 +296,197 @@ void setup()
   delay(1000);
 }
 
-///////////////////////////////////////////////////////////////////////////////////
-//**************************************LOOP**************************************//
-///////////////////////////////////////////////////////////////////////////////////
-//long last = 0;
+unsigned long temp = 0, now  =0;
+//checksum to help validate msg
+
+uint16_t generateChecksum(char data[], byte sizeOfData)
+{
+  uint16_t sum = 0;
+  while (sizeOfData)
+  {
+    sum += (uint8_t)data[--sizeOfData];
+  }
+  sum += 44;
+  return (sum % 255);
+}
+
 void loop()
 {
-  //wdt_reset();
+  unsigned long startTime  = millis();
+  Wire.beginTransmission(MCU1_I2C);
+  Wire.write(56);                            //exotic byte to sync the communication with MCU2
+  Wire.endTransmission();
 
+  Wire.beginTransmission(MCU2_I2C);
+  Wire.write(56);                            //exotic byte to sync the communication with MCU2
+  Wire.endTransmission();
+
+  //beginning of first wave
+  //MCU1
+  Wire.requestFrom(MCU1_I2C, 1);       // The TinyWire library only allows for one byte to be requested at a time
+  while (Wire.available() == 0)  ;
+  Wire.read();
+  //MCU2
+  Wire.requestFrom(MCU2_I2C, 1);       // The TinyWire library only allows for one byte to be requested at a time
+  while (Wire.available() == 0)  ;
+  Wire.read();
+
+  temp = millis();
+  Distance[5] = sonar[2].ping_cm();//ultrasonic sensor 6
+  now  = millis();
+  if ((now - temp ) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
+  {
+    delay((temp + ULTRASONIC_DELAY) - now); //make sure 15ms has elapsed before retrieving range data //TODO make define
+  }
+  
+  //MCU1
+  Wire.requestFrom(MCU1_I2C, 1);
+  while (Wire.available() == 0)  ;
+  Distance[0] = Wire.read();
+
+  //MCU2
+  Wire.requestFrom(MCU2_I2C, 1);
+  while (Wire.available() == 0)  ;
+  Distance[3] = Wire.read();
+  //end of first wave of sensor data
+
+  delay(25);
+  //beginning of second wave
+  //MCU1
+  Wire.requestFrom(MCU1_I2C, 1);
+  while (Wire.available() == 0)  ;
+  Wire.read();
+
+  temp = millis();
+  Distance[4] = sonar[0].ping_cm();// ultrasonic sensor 5
+  now  = millis();
+  if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
+  {
+    delay((temp + ULTRASONIC_DELAY) - now);
+  }
+
+  //MCU1
+  Wire.requestFrom(MCU1_I2C, 1);
+  while (Wire.available() == 0)  ;
+  Distance[1] = Wire.read();
+  //end of second wave of sensor data
+
+  //get battery Level
+  updateBatteryLevel();
+  delay(25);
+  //beginning of third wave
+  //MCU2
+  Wire.requestFrom(MCU2_I2C, 1);
+  while (Wire.available() == 0)  ;
+  Wire.read();
+
+  temp = millis();
+  Distance[6] = sonar[1].ping_cm();//ultrasonic sensor 7
+  now = millis();
+  if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
+    delay((temp + ULTRASONIC_DELAY) - now);
+  //MCU2
+  Wire.requestFrom(MCU2_I2C, 1);
+  while (Wire.available() == 0)  ;
+  Distance[2] = Wire.read();
+  //end of third wave of sensor data
+
+  
+
+  // Takes 6-8ms
   if ((millis() - timestamp) >= OUTPUT__DATA_INTERVAL)
   {
+    //    startTime = millis();
     timestamp_old = timestamp;
     timestamp = millis();
     if (timestamp > timestamp_old)
       G_Dt = (float) (timestamp - timestamp_old) / 1000.0f; // Real time of loop run. We use this on the DCM algorithm (gyro integration time)
-    else
-      G_Dt = 0;
-    Serial.println(poll());
-    //    poll();
-    //    Serial.println(millis()-last);
-    //    last = millis();
+    else G_Dt = 0;
+
+    // Update sensor readings
+    read_sensors();
+
+    // Apply sensor calibration
+    compensate_sensor_errors();
+
+    // Run DCM algorithm
+    Compass_Heading(); // Calculate magnetic heading
+    Matrix_update();
+    Normalize();
+    Drift_correction();
+    Euler_angles();
   }
-
-  while (Serial.available() > 0)
-  {
-    char recieved = Serial.read();
-    String inData = "";
-    Serial.println("I have recieved!");
-    if (recieved == 'c')
-    {
-      // Process message when new line character is recieved
-      while (recieved != ',' && recieved != '\n')
-      {
-        recieved = (char) Serial.read();
-        if (recieved != (char) - 1)
-          inData += recieved;
-      }
-      int steeringDirection = inData.toInt();
-      //      Serial.println(steeringDirection);
-
-      inData = "";
-      recieved = 'c';
-      while (recieved != ',' && recieved != '\n')
-      {
-        recieved = (char) Serial.read();
-        if (recieved != (char) - 1)
-          inData += recieved;
-      }
-      int drivePower = inData.toInt();
-
-      inData = "";
-      recieved = 'c';
-      while (recieved != ',' && recieved != '\n')
-      {
-        recieved = (char) Serial.read();
-        if (recieved != (char) - 1)
-          inData += recieved;
-      }
-
-      switch (inData.toInt())
-      {
-        case 0:
-          break;
-        case 1:
-          stopMove();
-          break;
-      }
-      inData = "";
-
-      instruct(steeringDirection, drivePower);
-      serialFlush();
-
-    }
-
-  }
-
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-//******************************NECESSARY FUNCTIONS******************************//
-///////////////////////////////////////////////////////////////////////////////////
-//Clear the incoming buffer
-void serialFlush() {
-  while (Serial.available() > 0) {
-    char t = Serial.read();
-  }
-}
-float oldAccel[2] = {0, 0}; //x,y
-String poll()
-{
-  ultra();
-  while (front == 0 || left == 0 || right == 0 || rear == 0)
-  {
-    ultra();
-  }
-
-  updateBatteryLevel();
-  Read_Gyro(); // Read gyroscope
-  Read_Accel(); // Read accelerometer
-  Read_Magn(); // Read magnetometer
-  // Apply sensor calibration
-  compensate_sensor_errors();
-  // Run DCM algorithm
-  Compass_Heading(); // Calculate magnetic heading
-  Matrix_update();
-  Normalize();
-  Drift_correction();
-  Euler_angles();
-  byte timeBetweenPoll = millis() - lastPoll;
-  lastPoll = millis();
+  
+  delay(25);
+  float freq = 1.0 / ((millis() - startTime) / 1000.0);
   String msg;
-  msg.concat(front);
+  msg.concat(Distance[0]);
   msg.concat(",");
-  msg.concat(left);
+  msg.concat(Distance[1]);
   msg.concat(",");
-  msg.concat(right);
+  msg.concat(Distance[2]);
   msg.concat(",");
-  msg.concat(rear);
+  msg.concat(Distance[3]);
   msg.concat(",");
-  msg.concat(MAG_Heading);
+  msg.concat(Distance[4]);
   msg.concat(",");
-  msg.concat(yaw);
+  msg.concat(Distance[5]);
   msg.concat(",");
-  msg.concat(timeBetweenPoll);
-  msg.concat(",");
-  msg.concat(oldAccel[0]);
-  msg.concat(",");
-  msg.concat(oldAccel[1]);
+  msg.concat(Distance[6]);
   msg.concat(",");
   msg.concat(accel[0]);
   msg.concat(",");
   msg.concat(accel[1]);
   msg.concat(",");
+  msg.concat(accel[2]);
+  msg.concat(",");
+  msg.concat(magnetom[0]);
+  msg.concat(",");
+  msg.concat(magnetom[1]);
+  msg.concat(",");
+  msg.concat(magnetom[2]);
+  msg.concat(",");
+  msg.concat(gyro[0]);
+  msg.concat(",");
+  msg.concat(gyro[1]);
+  msg.concat(",");
+  msg.concat(gyro[2]);
+  msg.concat(",");
   msg.concat(batteryLevel);
-  oldAccel[0] = accel[0];
-  oldAccel[1] = accel[1];
-  return msg;
+  msg.concat(",");
+  msg.concat(freq);
+  msg.concat(",");
+  msg.concat(millis());
+  msg.concat(",");
+  char buffer[msg.length()];
+  msg.toCharArray(buffer, msg.length());
+  msg.concat(generateChecksum(buffer, msg.length()));
+  Serial.println(msg);
 }
 
-void instruct(int dir, int power)//direction (-10 to 10) power 0 to 100
-{
-  if (power > 0)
-    forward(map(power, 0, 100, 90, 255));
-  else if (power == 0)
-    forward(0);
-  else
-    reverse(map(abs(power), 0, 100, 90, 255));
-  steeringServo.write(map(dir, -10, 10, 85, 65));
+//handles RC msgs
+void serialEvent() {
+  int steering, throttle, stopRequested;
+  inputString = "";
+    delay(10);
+    inputString = Serial.readStringUntil(',');
+    if (inputString.startsWith("r"))
+    {
+      steering = (inputString.substring(1)).toFloat();
+      inputString = Serial.readStringUntil(',');
+      throttle = inputString.toFloat();
+      inputString = Serial.readStringUntil('\n');
+      stopRequested = inputString.toFloat();
+#ifdef DEBUG
+      digitalWrite(13, HIGH);
+      String debug_msg = "";
+      debug_msg.concat(steering);
+      debug_msg.concat(",");
+      debug_msg.concat(throttle);
+      Serial.println(debug_msg);
+#endif
+    }
+    instruct(steering,throttle);
 }
-
-void updateBatteryLevel()
-{
-  batteryLevel = map(analogRead(BATTERY_MONITOR_PIN), 0, 1024, 0, 1024);
-}
-
-void software_Reset() // Restarts program from beginning but does not reset the peripherals and registers
-{
-asm volatile ("  jmp 0");  
-} 
 
 
