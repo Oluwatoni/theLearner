@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #ifndef LEARNER_CAR_H
 #define LEARNER_CAR_H
-#include <Servo.h>
+#include <ServoTimer2.h>
 
 #define STEERING_NEUTRAL 75
 #define FORWARD_PIN 5
@@ -13,7 +13,7 @@
 class Learner_car
 {
 private:
-	Servo steering;
+	ServoTimer2 steering;
 	bool direction;
 	int battery_level;
 public:
