@@ -1,4 +1,4 @@
-void ultrasonicRead()
+void ultrasonicRead1()
 {
   Wire.beginTransmission(MCU1_I2C);
   Wire.write(56);                            //exotic byte to sync the communication with MCU2
@@ -19,7 +19,7 @@ void ultrasonicRead()
   Wire.read();
 
   temp = millis();
-  raw_distance[5] = sonar[2].ping_cm();//ultrasonic sensor 6
+  raw_distance[0] = sonar[2].ping_cm();//ultrasonic sensor 6
   now  = millis();
   if ((now - temp ) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
   {
@@ -29,15 +29,19 @@ void ultrasonicRead()
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
   while (Wire.available() == 0)  ;
-  raw_distance[0] = Wire.read();
+  raw_distance[1] = Wire.read();
 
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
   while (Wire.available() == 0)  ;
-  raw_distance[3] = Wire.read();
+  raw_distance[2] = Wire.read();
   //end of first wave of sensor data
 
-  delay(SENSOR_WAVE_DELAY);
+  //delay(SENSOR_WAVE_DELAY);
+}
+
+void ultrasonicRead2()
+{
   //beginning of second wave
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
@@ -45,7 +49,7 @@ void ultrasonicRead()
   Wire.read();
 
   temp = millis();
-  raw_distance[4] = sonar[0].ping_cm();// ultrasonic sensor 5
+  raw_distance[3] = sonar[0].ping_cm();// ultrasonic sensor 5
   now  = millis();
   if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
   {
@@ -55,10 +59,14 @@ void ultrasonicRead()
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
   while (Wire.available() == 0)  ;
-  raw_distance[1] = Wire.read();
+  raw_distance[4] = Wire.read();
   //end of second wave of sensor data
 
-  delay(SENSOR_WAVE_DELAY);
+  //delay(SENSOR_WAVE_DELAY);
+}
+
+void ultrasonicRead3()
+{
   //beginning of third wave
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
@@ -66,16 +74,17 @@ void ultrasonicRead()
   Wire.read();
 
   temp = millis();
-  raw_distance[6] = sonar[1].ping_cm();//ultrasonic sensor 7
+  raw_distance[5] = sonar[1].ping_cm();//ultrasonic sensor 7
   now = millis();
   if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
     delay((temp + ULTRASONIC_DELAY) - now);
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
   while (Wire.available() == 0)  ;
-  raw_distance[2] = Wire.read();
+  raw_distance[6] = Wire.read();
   //end of third wave of sensor data
 }
+
 byte getMedian(byte (&myArray)[PRECISE])//fixxx
 {
   int highest = 0, highestIndex = 0, count = 0;
@@ -136,8 +145,9 @@ byte getMedian(byte (&myArray)[PRECISE])//fixxx
     return myArray[1];
 }
 
-void filterUltrasonicData()   // Sensor ping cycle complete, do something with the results.
+void filterUltrasonicData(int first_index, int last_index)   // Sensor ping cycle complete, do something with the results.
 {
+  /*
   if (start_filter <= (PRECISE - 1))
   {
     for (int i = 0; i < SONAR_NUM; i++)
@@ -146,24 +156,30 @@ void filterUltrasonicData()   // Sensor ping cycle complete, do something with t
     }
 
     start_filter++;
-  }
-  else 
+  }*/
+  //TODO remove braces 
   {
     for (int i = 1; i < PRECISE; i++)
     {
-      for (int n = 0; n < SONAR_NUM; n++)
+      for (int n = first_index; n <= last_index; n++)
       {
         filtering_distance[n][i - 1] = filtering_distance[n][i];
       }
     }
       
-    for (int n = 0; n < SONAR_NUM; n++)
+    for (int n = first_index; n <= last_index; n++)
     {
       filtering_distance[n][PRECISE - 1] = raw_distance[n];
     }
-    for (int n = 0; n < SONAR_NUM; n++)
+    for (int n = first_index; n <= last_index; n++)
     {
       filtered_distance[n] = getMedian(filtering_distance[n]);
     }
   }
 }
+void ultrasonicDelay(unsigned long now,unsigned long temp)
+{
+  if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
+    delay((temp + SENSOR_WAVE_DELAY) - now);
+}
+

@@ -23,6 +23,7 @@ byte raw_distance[SONAR_NUM] = {};                   // Where the range data is 
 byte filtering_distance [SONAR_NUM][PRECISE] = {};
 byte filtered_distance [SONAR_NUM] = {};
 byte start_filter = 0;
+int steering, throttle, stop_requested;
 
 IMU Imu(50);
 Learner_car Car;
@@ -41,6 +42,14 @@ void setup()
   Imu.Setup();
   Car.Setup();
   Serial.begin(115200);
+
+  for (int i = 0; i < SONAR_NUM; i++)
+  {filtered_distance
+    raw_distance[i] = 0;
+    [i] = 0;
+    for (int j = 0; j < PRECISE; j++)
+      filtering_distance[i][j] = 0;
+  }
 }
 
 unsigned long temp = 0, now  =0;
@@ -60,63 +69,30 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 
 void loop()
 {
-  unsigned long startTime  = millis();
-  ultrasonicRead();
+  sendUltrasonicData1();
   temp = millis();
-  filterUltrasonicData();
-  Imu.UpdateIMU();
-  String msg;
-  msg.concat(filtered_distance[0]);
-  msg.concat(",");
-  msg.concat(filtered_distance[1]);
-  msg.concat(",");
-  msg.concat(filtered_distance[2]);
-  msg.concat(",");
-  msg.concat(filtered_distance[3]);
-  msg.concat(",");
-  msg.concat(filtered_distance[4]);
-  msg.concat(",");
-  msg.concat(filtered_distance[5]);
-  msg.concat(",");
-  msg.concat(filtered_distance[6]);
-  msg.concat(",");
-  msg.concat(Imu.GetYaw());
-  msg.concat(",");
-  msg.concat(Imu.GetPitch());
-  msg.concat(",");
-  msg.concat(Imu.GetRoll());
-  msg.concat(",");
-  msg.concat(Imu.GetAccX());
-  msg.concat(",");
-  msg.concat(Imu.GetAccY());
-  msg.concat(",");
-  msg.concat(Imu.GetAccZ());
-  msg.concat(",");
-  msg.concat(Imu.GetGyroX());
-  msg.concat(",");
-  msg.concat(Imu.GetGyroY());
-  msg.concat(",");
-  msg.concat(Imu.GetGyroZ());
-  msg.concat(",");
-  msg.concat(Car.GetBatteryLevel());
-  msg.concat(",");
-  msg.concat(freq);
-  msg.concat(",");
-  msg.concat(millis());
-  msg.concat(",");
-  char buffer[msg.length()];
-  msg.toCharArray(buffer, msg.length());
-  msg.concat(generateChecksum(buffer, msg.length()));
-  Serial.println(msg);
+  sendImuData();
+  Car.Instruct(steering,throttle);
   now = millis();
-  if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
-    delay((temp + SENSOR_WAVE_DELAY) - now);
-  freq = 1.0 / ((millis() - startTime) / 1000.0);
+  ultrasonicDelay(now,temp);
+  sendUltrasonicData2();
+  temp = millis();
+  sendImuData();
+  Car.Instruct(steering,throttle);
+  now = millis();
+  ultrasonicDelay(now,temp);
+  sendUltrasonicData3();
+  temp = millis();
+  sendImuData();
+  Car.Instruct(steering,throttle);
+  now = millis();
+  ultrasonicDelay(now,temp);
+  
 }
 
 //handles RC msgs
 void serialEvent() {
-  int steering, throttle, stopRequested,checksum;
+  int temp_steering, temp_throttle, temp_stop_requested,checksum;
   String to_be_checked = "";
   inputString = "";
     delay(10);
@@ -124,22 +100,23 @@ void serialEvent() {
     if (inputString.startsWith("r"))
     {
       to_be_checked.concat("r,");
-      steering = (inputString.substring(1)).toInt();
+      temp_steering = (inputString.substring(1)).toInt();
       to_be_checked.concat(steering);
       to_be_checked.concat(",");
       inputString = Serial.readStringUntil(',');
-      throttle = inputString.toInt();
+      temp_throttle = inputString.toInt();
       inputString = Serial.readStringUntil(',');
       to_be_checked.concat(throttle);
       to_be_checked.concat(",");
-      stopRequested = inputString.toInt();
-      to_be_checked.concat(stopRequested);
+      temp_stop_requested = inputString.toInt();
+      to_be_checked.concat(temp_stop_requested);
       to_be_checked.concat(",");
       inputString = Serial.readStringUntil('\n');
 //      Serial.println(to_be_checked);
       checksum = inputString.toInt();
-#ifdef DEBUG
       digitalWrite(13, HIGH);
+#ifdef DEBUG
+      
       String debug_msg = "";
       debug_msg.concat(steering);
       debug_msg.concat(",");
@@ -150,13 +127,19 @@ void serialEvent() {
     char buffer[to_be_checked.length()];
     to_be_checked.toCharArray(buffer, to_be_checked.length());
     if (checksum == generateChecksum(buffer, to_be_checked.length()))
-      Car.Instruct(steering,throttle);
+    {
+      steering = temp_steering;
+      throttle = temp_throttle;
+      stop_requested = temp_stop_requested;
+    }
+    /*
     else
     {
       Serial.print(generateChecksum(buffer, to_be_checked.length()));
       Serial.print(", ");
       Serial.println(checksum);
     }
+    */
 }
 
 
