@@ -1,0 +1,4 @@
+<launch>
+<node pkg="joy" name="joy_node" type="joy_node"/>
+<node pkg="the_learner" name="sensor_publish_and_control" type="sensor_publish_and_control.py" args="/dev/rfcomm1" />
+</launch>

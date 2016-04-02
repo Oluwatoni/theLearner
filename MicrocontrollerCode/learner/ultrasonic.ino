@@ -33,11 +33,9 @@ void ultrasonicRead1()
 
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   raw_distance[2] = Wire.read();
   //end of first wave of sensor data
-
-  //delay(SENSOR_WAVE_DELAY);
 }
 
 void ultrasonicRead2()
@@ -45,7 +43,7 @@ void ultrasonicRead2()
   //beginning of second wave
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   Wire.read();
 
   temp = millis();
@@ -61,8 +59,6 @@ void ultrasonicRead2()
   while (Wire.available() == 0)  ;
   raw_distance[4] = Wire.read();
   //end of second wave of sensor data
-
-  //delay(SENSOR_WAVE_DELAY);
 }
 
 void ultrasonicRead3()

@@ -44,9 +44,9 @@ void setup()
   Serial.begin(115200);
 
   for (int i = 0; i < SONAR_NUM; i++)
-  {filtered_distance
+  {
+    filtered_distance[i] = 0;
     raw_distance[i] = 0;
-    [i] = 0;
     for (int j = 0; j < PRECISE; j++)
       filtering_distance[i][j] = 0;
   }
@@ -101,12 +101,12 @@ void serialEvent() {
     {
       to_be_checked.concat("r,");
       temp_steering = (inputString.substring(1)).toInt();
-      to_be_checked.concat(steering);
+      to_be_checked.concat(temp_steering);
       to_be_checked.concat(",");
       inputString = Serial.readStringUntil(',');
       temp_throttle = inputString.toInt();
       inputString = Serial.readStringUntil(',');
-      to_be_checked.concat(throttle);
+      to_be_checked.concat(temp_throttle);
       to_be_checked.concat(",");
       temp_stop_requested = inputString.toInt();
       to_be_checked.concat(temp_stop_requested);
@@ -114,20 +114,21 @@ void serialEvent() {
       inputString = Serial.readStringUntil('\n');
 //      Serial.println(to_be_checked);
       checksum = inputString.toInt();
-      digitalWrite(13, HIGH);
-#ifdef DEBUG
-      
-      String debug_msg = "";
-      debug_msg.concat(steering);
-      debug_msg.concat(",");
-      debug_msg.concat(throttle);
-      Serial.println(debug_msg);
-#endif
+
     }
     char buffer[to_be_checked.length()];
     to_be_checked.toCharArray(buffer, to_be_checked.length());
     if (checksum == generateChecksum(buffer, to_be_checked.length()))
     {
+#ifdef DEBUG
+      Serial.println("\n\n\n");
+      String debug_msg = "";
+      debug_msg.concat(steering);
+      debug_msg.concat(",");
+      debug_msg.concat(throttle);
+      Serial.println(debug_msg);
+      Serial.println("\n\n\n");
+#endif
       steering = temp_steering;
       throttle = temp_throttle;
       stop_requested = temp_stop_requested;
@@ -135,9 +136,12 @@ void serialEvent() {
     /*
     else
     {
+      Serial.println("\n\n\n");
+      Serial.println(to_be_checked);
       Serial.print(generateChecksum(buffer, to_be_checked.length()));
       Serial.print(", ");
       Serial.println(checksum);
+      Serial.println("\n\n\n");
     }
     */
 }

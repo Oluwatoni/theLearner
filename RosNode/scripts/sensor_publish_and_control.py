@@ -12,7 +12,9 @@ from sensor_msgs.msg import Imu
 from std_msgs.msg import Int16
 from std_msgs.msg import Int16MultiArray
 
-_arduino_serial_port = serial.Serial("/dev/rfcomm0",115200)
+serial_port = sys.argv[1]
+
+_arduino_serial_port = serial.Serial(serial_port,115200)
 _arduino_serial_port.timeout = None    
 
 def generate_checksum(data):
@@ -75,7 +77,7 @@ class PS3Controller:
 	print self.__msg
     	#if not(self.__auto):
 	#    if self.__msg != self.__old_msg:
-	if time.clock() - self.__old_time >= 0.075: 
+	if time.clock() - self.__old_time >= 0.1: 
             _arduino_serial_port.write(self.__msg)
 	    _arduino_serial_port.flush()
 	    self.__old_time = time.clock() 
@@ -126,31 +128,8 @@ class ArduinoMonitor (threading.Thread):
                 if not(self.data_is_valid(self.__sensorReadings)):
                     pass
                 else:
-                    for num in range(len(self.__ultrasonicData)):
-                        self.__ultrasonicData[num] = float(self.__sensorReadings[num]) 
-                    yaw =  float(self.__sensorReadings[7])
-                    pitch = float(self.__sensorReadings[8])
-                    roll = float(self.__sensorReadings[9])
-                    self.__imuMsg.linear_acceleration.x = -float(self.__sensorReadings[10]) * self.__accel_factor
-                    self.__imuMsg.linear_acceleration.y = float(self.__sensorReadings[11]) * self.__accel_factor
-                    self.__imuMsg.linear_acceleration.z = float(self.__sensorReadings[12]) * self.__accel_factor
-                    self.__imuMsg.angular_velocity.x = float(self.__sensorReadings[13])
-                    self.__imuMsg.angular_velocity.y = -float(self.__sensorReadings[14])
-                    self.__imuMsg.angular_velocity.z = -float(self.__sensorReadings[15])
-                    q = quaternion_from_euler(roll,pitch,yaw)
-                    self.__imuMsg.orientation.x = q[0]
-                    self.__imuMsg.orientation.y = q[1]
-                    self.__imuMsg.orientation.z = q[2]
-                    self.__imuMsg.orientation.w = q[3]
-                    self.__imuMsg.header.stamp= rospy.Time.now()
-                    self.__imuMsg.header.frame_id = 'learner_imu_link'
-                    self.__imuMsg.header.seq = self.__seq
-                    self.__seq += 1
-                    self.__imu_pub.publish(self.__imuMsg)
-                    self.__batteryLevel = int(self.__sensorReadings[16]) 
-                    self.__battery_pub.publish(self.__batteryLevel)
-                    self.__ultrasonic_pub.publish(["ultrasonic", 7, 7],self.__ultrasonicData)                
- 
+                    pass
+                    
     #validates message using the checksum        
     def data_is_valid(self, data):
         checksum = int(data.pop())
