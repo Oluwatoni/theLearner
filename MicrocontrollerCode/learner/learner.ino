@@ -92,6 +92,7 @@ void loop()
 
 //handles RC msgs
 void serialEvent() {
+  /*
   int temp_steering, temp_throttle, temp_stop_requested,checksum;
   String to_be_checked = "";
   inputString = "";

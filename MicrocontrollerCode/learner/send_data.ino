@@ -26,8 +26,7 @@ void sendImuData()
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
   msg.concat(generateChecksum(buffer, msg.length()));
-  Serial.println(msg);
-
+  Serial.fprintln(msg);
 }
 
 void sendUltrasonicData1()//sends IMU data inbetween waves
