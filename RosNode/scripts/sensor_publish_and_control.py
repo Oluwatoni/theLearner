@@ -112,7 +112,7 @@ class ArduinoMonitor (threading.Thread):
         self.__ultrasonic_msg.field_of_view = 0.5236
         self.__ultrasonic_msg.radiation_type = self.__ultrasonic_msg.ULTRASOUND
         self.__ultrasonic_msg.min_range = 0.0
-        self.__ultrasonic_msg.max_range = 2.0
+        self.__ultrasonic_msg.max_range = 2.5
         for i in range(7):
             self.__ultrasonic_pub.append(rospy.Publisher('arduino_sensors/ultrasonic_'+str(i),Range,queue_size = 1))
         self.__battery_pub = rospy.Publisher('arduino_sensors/battery_level', Int16,queue_size = 1)
@@ -132,7 +132,7 @@ class ArduinoMonitor (threading.Thread):
 
     def run(self):
         while self.__running:
-            time.sleep(.02)
+            #time.sleep(.02)
             if _arduino_serial_port.inWaiting():
                 #print "theres something!"
                 self.__sensorMsg = _arduino_serial_port.readline()
@@ -176,7 +176,6 @@ class ArduinoMonitor (threading.Thread):
                     #publish Ultra 1,4,6
                     elif self.__sensorReadings[0] == 'u':
                         order_u = [5,0,3]
-                        print self.__sensorReadings
                         self.publish_ultrasonic(order_u)
                         #print "Ultra1"
                     #publish Ultra 2,5
@@ -197,7 +196,7 @@ class ArduinoMonitor (threading.Thread):
     #publishes ultrasonic data in the order supplied
     def publish_ultrasonic(self, order):
         for i in range(len(order)):
-            self.__ultrasonic_msg.range = float(self.__sensorReadings[i+1])
+            self.__ultrasonic_msg.range = float(self.__sensorReadings[i+1]) / 100.0
             self.__ultrasonic_msg.header.frame_id = "learner_ultrasonic_" + str(order[i]) + "_link"
             self.__ultrasonic_msg.header.stamp= rospy.Time.now()
             self.__ultrasonic_msg.header.seq = self.__seq

@@ -10,22 +10,22 @@ if __name__ == '__main__':
     
     while not rospy.is_shutdown():
         br.sendTransform((0.067, 0.076, 0.0),
-                         quaternion_from_euler(0,0,0.7417),
+                         quaternion_from_euler(0,0,0.8116),
                          rospy.Time.now(),
                          "learner_ultrasonic_0_link",
                          "learner")
         br.sendTransform((0.108, 0.028, 0.0),
-                         quaternion_from_euler(0,0,0.2182),
+                         quaternion_from_euler(0,0,0.2705),
                          rospy.Time.now(),
                          "learner_ultrasonic_1_link",
                          "learner")
         br.sendTransform((0.108, -0.028, 0.0),
-                         quaternion_from_euler(0,0,-0.2182),
+                         quaternion_from_euler(0,0,-0.2705),
                          rospy.Time.now(),
                          "learner_ultrasonic_2_link",
                          "learner")
         br.sendTransform((0.067, -0.076, 0.0),
-                         quaternion_from_euler(0,0,-0.7417),
+                         quaternion_from_euler(0,0,-0.8116),
                          rospy.Time.now(),
                          "learner_ultrasonic_3_link",
                          "learner")

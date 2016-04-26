@@ -577,16 +577,16 @@ float IMU::GetHeading()
 
 float IMU::GetYaw()
 {
-	return yaw;
+	return TO_DEG(yaw);
 }
 
 float IMU::GetPitch()
 {
-	return pitch;
+	return TO_DEG(pitch);
 }
 
 float IMU::GetRoll()
 {
-	return roll;
+	return TO_DEG(roll);
 }
 

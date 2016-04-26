@@ -9,6 +9,7 @@
 #include <NewPing.h>
 #include <Servo.h>
 #include <Learner_car.h>
+#include <avr/interrupt.h>
 //#define DEBUG
 //defines for the ultrasonic sensors
 #define MCU1_I2C 1
@@ -25,7 +26,7 @@ byte filtered_distance [SONAR_NUM] = {};
 byte start_filter = 0;
 int steering, throttle, stop_requested;
 
-IMU Imu(50);
+IMU Imu(50);//frequency in Hz
 Learner_car Car;
 NewPing sonar[SONAR_NUM - 4] =       // Sensor object array.
 {
@@ -42,7 +43,9 @@ void setup()
   Imu.Setup();
   Car.Setup();
   Serial.begin(115200);
-
+  sei();
+  UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
+  
   for (int i = 0; i < SONAR_NUM; i++)
   {
     filtered_distance[i] = 0;
@@ -147,4 +150,38 @@ void serialEvent() {
     */
 }
 
+void USART_Transmit( unsigned char data )
+{
+  /* Wait for empty transmit buffer */
+  while ( !( UCSR0A & (1<<UDRE0)) )
+  ;
+  /* Put data into buffer, sends the data */
+  UDR0 = data;
+}
+
+/*
+ISR(USART_RX_vect)
+{
+  USART_Transmit(UDR0);
+  cli();
+  /*
+  char temp = UDR0;
+  if (temp == '\n')
+  {
+    received_data[usart_index] = temp;
+    usart_index = 0;
+    sei();
+    extractData(first_char);
+    data_is_ready = 1;
+  }
+  else
+  {
+    data_is_ready = 0;
+    received_data[usart_index] = temp;
+    usart_index++;
+  }
+  
+  sei();
+}
+*/
 
