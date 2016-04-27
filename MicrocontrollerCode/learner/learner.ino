@@ -20,6 +20,8 @@
 #define SENSOR_WAVE_DELAY 20
 #define PRECISE 3
 
+#define UART_RX_HARDWARE_ENABLE
+
 byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored
 byte filtering_distance [SONAR_NUM][PRECISE] = {};
 byte filtered_distance [SONAR_NUM] = {};
@@ -72,6 +74,7 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 
 void loop()
 {
+  sendGPSData();
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
@@ -94,7 +97,8 @@ void loop()
 }
 
 //handles RC msgs
-void serialEvent() {
+void serialEvent() 
+{
   /*
   int temp_steering, temp_throttle, temp_stop_requested,checksum;
   String to_be_checked = "";
@@ -159,7 +163,7 @@ void USART_Transmit( unsigned char data )
   UDR0 = data;
 }
 
-/*
+//Handle incoming commands
 ISR(USART_RX_vect)
 {
   USART_Transmit(UDR0);
@@ -180,8 +184,8 @@ ISR(USART_RX_vect)
     received_data[usart_index] = temp;
     usart_index++;
   }
-  
+  */
   sei();
 }
-*/
+
 
