@@ -1,5 +1,6 @@
 void ultrasonicRead1()
 {
+
   Wire.beginTransmission(MCU1_I2C);
   Wire.write(56);                            //exotic byte to sync the communication with MCU2
   Wire.endTransmission();
@@ -36,6 +37,7 @@ void ultrasonicRead1()
   while (Wire.available() == 0);
   raw_distance[2] = Wire.read();
   //end of first wave of sensor data
+
 }
 
 void ultrasonicRead2()
@@ -59,10 +61,12 @@ void ultrasonicRead2()
   while (Wire.available() == 0)  ;
   raw_distance[4] = Wire.read();
   //end of second wave of sensor data
+
 }
 
 void ultrasonicRead3()
 {
+
   //beginning of third wave
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
@@ -173,6 +177,7 @@ void filterUltrasonicData(int first_index, int last_index)   // Sensor ping cycl
     }
   }
 }
+
 void ultrasonicDelay(unsigned long now,unsigned long temp)
 {
   if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)

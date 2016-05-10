@@ -46,7 +46,7 @@ class PS3Controller:
         self.__brake = 13
         self.__auto = False
         #Arduino control msg
-        self.__msg = "r" #r means rc a means autonomous and e is for e-stop
+        self.__msg = "r," #r means rc a means autonomous and e is for e-stop
         self.__old_msg = ""
         self.__old_time = time.clock()
 
@@ -89,7 +89,7 @@ class PS3Controller:
             self.__old_time = time.clock()
             print self.__msg
         self.__old_msg = self.__msg
-        self.__msg = self.__msg[0]
+        self.__msg = "r,"
 
 #thread that handles incoming messages from the arduino
 class ArduinoMonitor (threading.Thread):

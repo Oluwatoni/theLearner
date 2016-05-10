@@ -37,8 +37,10 @@ NewPing sonar[SONAR_NUM - 4] =       // Sensor object array.
   NewPing(4, 2, MAX_DISTANCE)//ultra 6
 };
 
-String inputString = "";         // a string to hold incoming data
-boolean stringComplete = false;  // whether the string is complete
+char input_string[15];         // a string to hold incoming data
+char * first_char = input_string;
+uint8_t input_string_index = 0;
+boolean input_string_complete = false;  // whether the string is complete
 
 void setup()
 {
@@ -46,8 +48,8 @@ void setup()
   Car.Setup();
   Serial.begin(115200);
   sei();
-  UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
-  
+  UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
+
   for (int i = 0; i < SONAR_NUM; i++)
   {
     filtered_distance[i] = 0;
@@ -57,8 +59,8 @@ void setup()
   }
 }
 
-unsigned long temp = 0, now  =0;
-float freq;
+unsigned long temp = 0, now  = 0;
+
 //checksum to help validate msg
 
 uint16_t generateChecksum(char data[], byte sizeOfData)
@@ -75,83 +77,95 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 void loop()
 {
   sendGPSData();
+  /*
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
-  Car.Instruct(steering,throttle);
+//  Car.Instruct(steering, throttle);
   now = millis();
-  ultrasonicDelay(now,temp);
+  ultrasonicDelay(now, temp);
   sendUltrasonicData2();
   temp = millis();
   sendImuData();
-  Car.Instruct(steering,throttle);
+//  Car.Instruct(steering, throttle);
   now = millis();
-  ultrasonicDelay(now,temp);
+  ultrasonicDelay(now, temp);
   sendUltrasonicData3();
   temp = millis();
   sendImuData();
-  Car.Instruct(steering,throttle);
+//  Car.Instruct(steering, throttle);
   now = millis();
-  ultrasonicDelay(now,temp);
-  
+  ultrasonicDelay(now, temp);
+  */
 }
 
 //handles RC msgs
-void serialEvent() 
+void extractData(char * msg, uint8_t msg_size)
 {
-  /*
-  int temp_steering, temp_throttle, temp_stop_requested,checksum;
-  String to_be_checked = "";
-  inputString = "";
-    delay(10);
-    inputString = Serial.readStringUntil(',');
-    if (inputString.startsWith("r"))
+  int8_t state = 0, temp_steering, temp_throttle, temp_stop, checksum_size = 0,checksum;
+  String raw_steering = "", raw_throttle = "", raw_stop = "", raw_checksum = "";
+  char temp[15];
+  
+  for(int i = 0; i < msg_size; i++)
+  {
+    if (*msg == ',')
+      state++;
+    switch(state)
     {
-      to_be_checked.concat("r,");
-      temp_steering = (inputString.substring(1)).toInt();
-      to_be_checked.concat(temp_steering);
-      to_be_checked.concat(",");
-      inputString = Serial.readStringUntil(',');
-      temp_throttle = inputString.toInt();
-      inputString = Serial.readStringUntil(',');
-      to_be_checked.concat(temp_throttle);
-      to_be_checked.concat(",");
-      temp_stop_requested = inputString.toInt();
-      to_be_checked.concat(temp_stop_requested);
-      to_be_checked.concat(",");
-      inputString = Serial.readStringUntil('\n');
-//      Serial.println(to_be_checked);
-      checksum = inputString.toInt();
-
+      case 0:
+        //r before the first comma
+        temp[checksum_size++] = *msg;
+        break;
+      case 1:
+        //Steering
+        if (*msg != ',')
+          raw_steering.concat(*msg);
+        temp[checksum_size++] = *msg;
+        break;
+      case 2:
+        //Throttle
+        if (*msg != ',')
+          raw_throttle.concat(*msg);
+        temp[checksum_size++] = *msg;
+        break;
+      case 3:
+        if (*msg != ',')
+          raw_stop.concat(*msg);
+        temp[checksum_size++] = *msg;
+        break;
+      case 4:
+        if (*msg != '\n' && *msg != ',')
+          raw_checksum.concat(*msg);
+        break;
     }
-    char buffer[to_be_checked.length()];
-    to_be_checked.toCharArray(buffer, to_be_checked.length());
-    if (checksum == generateChecksum(buffer, to_be_checked.length()))
-    {
-#ifdef DEBUG
-      Serial.println("\n\n\n");
-      String debug_msg = "";
-      debug_msg.concat(steering);
-      debug_msg.concat(",");
-      debug_msg.concat(throttle);
-      Serial.println(debug_msg);
-      Serial.println("\n\n\n");
-#endif
-      steering = temp_steering;
-      throttle = temp_throttle;
-      stop_requested = temp_stop_requested;
-    }
+    msg++;
+  }
+  temp[checksum_size++] = ',';
+  
+  if (generateChecksum(temp, checksum_size) == raw_checksum.toInt())
+  {
     /*
-    else
-    {
-      Serial.println("\n\n\n");
-      Serial.println(to_be_checked);
-      Serial.print(generateChecksum(buffer, to_be_checked.length()));
-      Serial.print(", ");
-      Serial.println(checksum);
-      Serial.println("\n\n\n");
-    }
+    Serial.println(raw_steering);
+    Serial.println(raw_throttle);
+    Serial.println(raw_stop);
     */
+    temp_steering = raw_steering.toInt();
+    temp_throttle = raw_throttle.toInt();
+    temp_stop = raw_stop.toInt();
+    Car.Instruct(temp_steering, temp_throttle);
+  }
+  /*
+  else
+  {
+    for(int i = 0; i < checksum_size; i++)
+    {
+      Serial.print(temp[i]);
+    }
+    Serial.println();
+    Serial.println(raw_checksum);
+    Serial.println(generateChecksum(temp, checksum_size));
+  }
+  */
 }
 
 void USART_Transmit( unsigned char data )
@@ -164,28 +178,27 @@ void USART_Transmit( unsigned char data )
 }
 
 //Handle incoming commands
+
 ISR(USART_RX_vect)
 {
-  USART_Transmit(UDR0);
+  //USART_Transmit(UDR0);
   cli();
-  /*
   char temp = UDR0;
   if (temp == '\n')
   {
-    received_data[usart_index] = temp;
-    usart_index = 0;
+    input_string[input_string_index] = temp;
     sei();
-    extractData(first_char);
-    data_is_ready = 1;
+    extractData(first_char, input_string_index);
+    input_string_index = 0;
+    input_string_complete = true;
   }
   else
   {
-    data_is_ready = 0;
-    received_data[usart_index] = temp;
-    usart_index++;
+    input_string_complete = false;
+    input_string[input_string_index] = temp;
+    input_string_index++;
   }
-  */
+
   sei();
 }
-
 

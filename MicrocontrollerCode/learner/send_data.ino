@@ -26,7 +26,7 @@ void sendImuData()
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
   msg.concat(generateChecksum(buffer, msg.length()));
-  //Serial.println(msg);
+//  Serial.println(msg);
 }
 
 void sendUltrasonicData1()//sends IMU data inbetween waves
@@ -45,7 +45,7 @@ void sendUltrasonicData1()//sends IMU data inbetween waves
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
   msg.concat(generateChecksum(buffer, msg.length()));
-  //Serial.println(msg);
+//  Serial.println(msg);
 }
 
 void sendUltrasonicData2()//sends IMU data inbetween waves
@@ -62,7 +62,7 @@ void sendUltrasonicData2()//sends IMU data inbetween waves
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
   msg.concat(generateChecksum(buffer, msg.length()));
-  //Serial.println(msg);
+//  Serial.println(msg);
 }
 
 void sendUltrasonicData3()//sends IMU data inbetween waves
@@ -79,7 +79,7 @@ void sendUltrasonicData3()//sends IMU data inbetween waves
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
   msg.concat(generateChecksum(buffer, msg.length()));
-  //Serial.println(msg);
+//  Serial.println(msg);
 }
 
 void sendGPSData()
@@ -89,6 +89,10 @@ void sendGPSData()
   Wire.endTransmission();
   int max_size = 12;
   Wire.requestFrom(0x10, max_size);
+  while(!Wire.available())
+  {
+    Serial.println('2');
+  }
   
   while(max_size)
   {
