@@ -95,7 +95,11 @@ void loop()
   sendImuData();
 //  Car.Instruct(steering, throttle);
   now = millis();
+<<<<<<< HEAD
+  ultrasonicDelay(now,temp);
+=======
   ultrasonicDelay(now, temp);
+>>>>>>> aebf4b0895b0e936ff408781b4ae9bd3d46fb251
   */
 }
 
@@ -176,7 +180,7 @@ void USART_Transmit( unsigned char data )
   /* Put data into buffer, sends the data */
   UDR0 = data;
 }
-
+/*
 //Handle incoming commands
 
 ISR(USART_RX_vect)
@@ -201,4 +205,5 @@ ISR(USART_RX_vect)
 
   sei();
 }
+*/
 

@@ -26,13 +26,13 @@
 #define TWI_CMD_MASTER_WRITE 0x10
 #define TWI_CMD_MASTER_READ  0x20
 #define USART_BUFFER_SIZE 80 //NMEA sentences cannot be longer than 80 characters 
-#define MESSEAGE_TYPE_SIZE 5
-#define LATITUDE_SIZE 12
-#define LONGITUDE_SIZE 13
-#define TIME_SIZE 9
-#define SPEED_SIZE 5
-#define COURSE_SIZE 5
-#define ALTITUDE_SIZE 6
+#define MESSEAGE_TYPE_SIZE 6 //all _SIZE contain extra byte for checksum
+#define LATITUDE_SIZE 13
+#define LONGITUDE_SIZE 14
+#define TIME_SIZE 10
+#define SPEED_SIZE 6
+#define COURSE_SIZE 6
+#define ALTITUDE_SIZE 7
 #define TEMP_SIZE 50
 #define CHECKSUM_SIZE 2
 

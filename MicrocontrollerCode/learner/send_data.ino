@@ -84,20 +84,32 @@ void sendUltrasonicData3()//sends IMU data inbetween waves
 
 void sendGPSData()
 {
-  Wire.beginTransmission(0x10);
-  Wire.write('a');
-  Wire.endTransmission();
-  int max_size = 12;
-  Wire.requestFrom(0x10, max_size);
-  while(!Wire.available())
+  /*a-latitude
+    b-longitude
+    c-time
+    d-speed
+    e-course
+  */
+  String GPS_msg = "g,";
+  byte len[5] = {12,13,9,5,5};
+  char req = 'a';
+  for (int i = 0; i< 5;i++)
   {
-    Serial.println('2');
+    Wire.beginTransmission(0x10);
+    Wire.write((char)req+i);
+    Wire.endTransmission();
+    Wire.requestFrom(0x10,len[i]);
+    
+    for(int j = 0; j < len[i]; j++)
+    {
+      while (!Wire.available());
+      char temp = Wire.read();
+      //if (temp != ' ')
+      GPS_msg.concat(temp);
+    }
+    GPS_msg.concat(',');  
+    // echo out whatever we get back
   }
-  
-  while(max_size)
-  {
-    Serial.println(Wire.read());
-    max_size--;
-  }
+  Serial.println(GPS_msg);
 }
 

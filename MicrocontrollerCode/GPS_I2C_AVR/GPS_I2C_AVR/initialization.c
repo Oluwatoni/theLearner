@@ -64,7 +64,8 @@ uint8_t compareCharArray(char a[], char b[], uint8_t size)
 uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_commas)
 {
 	uint8_t move_pointer_by = 0;
-	for(int i = 0; i <= size; i++)
+  uint16_t total = 0;
+	for(int i = 0; i < size; i++)
 	{
 		if(*pointer == ',' || *pointer == '\n')
 		{
@@ -75,10 +76,13 @@ uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_c
 				break;
 			}
 		}
-		array[i] = *pointer;
+		array[i] = (char)*pointer;
+    total+= array[i];
 		pointer++;
 		move_pointer_by++;
 	}
+  total %= 255;
+  array[size-1] = (char) total;
 	return move_pointer_by;
 }
 
@@ -91,9 +95,9 @@ void printCharArray(char array[], uint8_t size)
 	USART_Transmit('\n');
 }
 
+//TODO CHECKSUM CHECK
 void extractData(char* message_index)
 {
-	//TODO replace the numbers with defines
 	char message_type[MESSEAGE_TYPE_SIZE] = {'E','R','R'};
 	char gprmc[] = {'G','P','R','M','C'};
 	char gpgga[] = {'G','P','G','G','A'};
@@ -134,6 +138,12 @@ void extractData(char* message_index)
 			printCharArray(temp_course, COURSE_SIZE);
 			printCharArray(message_checksum,CHECKSUM_SIZE);
 			*/
+      memcpy(time, temp_time, TIME_SIZE);
+      memcpy(latitude, temp_latitude, LATITUDE_SIZE);
+      memcpy(longitude, temp_longitude, LONGITUDE_SIZE);
+      memcpy(altitude, temp_altitude, ALTITUDE_SIZE);
+      memcpy(speed, temp_speed, SPEED_SIZE);
+      memcpy(course, temp_course, COURSE_SIZE);
 		}
 		else if(compareCharArray(message_type,gpgga,MESSEAGE_TYPE_SIZE))
 		{
@@ -144,19 +154,15 @@ void extractData(char* message_index)
 			printCharArray(message_type, MESSEAGE_TYPE_SIZE);
 			printCharArray(temp_altitude, ALTITUDE_SIZE);
 			*/
+      memcpy(altitude, temp_altitude, ALTITUDE_SIZE);
 		}
 	}
-	memcpy(time, temp_time, TIME_SIZE);
-	memcpy(latitude, temp_latitude, LATITUDE_SIZE);
-	memcpy(longitude, temp_longitude, LONGITUDE_SIZE);
-	memcpy(altitude, temp_altitude, ALTITUDE_SIZE);
-	memcpy(speed, temp_speed, SPEED_SIZE);
-	memcpy(course, temp_course, COURSE_SIZE);
+  
+	
 }
 
 ISR(USART_RX_vect)
 {
-	//USART_Transmit(UDR0);
 	cli();
 	char temp = UDR0;
 	if (temp == '\n')
