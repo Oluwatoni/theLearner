@@ -12,8 +12,10 @@ from sensor_msgs.msg import Imu
 from sensor_msgs.msg import Range
 from std_msgs.msg import Int16
 
+#read in serial port
 serial_port = sys.argv[1]
 
+#setup serial port
 _arduino_serial_port = serial.Serial(serial_port,115200)
 _arduino_serial_port.timeout = None
 
@@ -24,7 +26,6 @@ def generate_checksum(data, check_if_number):
             try:
                 float(data[i])
             except ValueError:
-                #print data
                 return -1
         for char in data[i]:
             sumOfBytes += ord(char)
@@ -35,10 +36,7 @@ def generate_checksum(data, check_if_number):
 class PS3Controller:
     def __init__(self):
         "PS3 controller node constructor"
-        #state controls
-        self.__run_suspend = 10           # toggle between autonomous run and teleop
         #self.__estop = 11                 # emergency stop
-
         # tele-operation controls
         self.__steer = 0                  # steering axis
         self.__drive = 13                  # shift to Drive
@@ -46,16 +44,17 @@ class PS3Controller:
         self.__brake = 13
         self.__auto = False
         #Arduino control msg
-        self.__msg = "r," #r means rc a means autonomous and e is for e-stop
+        self.__msg = "r,"   #r indicates the start of a message
         self.__old_msg = ""
         self.__old_time = time.clock()
 
-        # initialize ROS topics
+        # initialize ROS joystick suscriber
         self.__joy = rospy.Subscriber('joy', Joy, self.joy_callback)
 
     def joy_callback(self, joy):
         "invoked every time a joystick message arrives"
         #rospy.logdebug('joystick input:\n' + str(joy))
+        
         '''
         # handle E-stop buttons
          if joy.buttons[self.__estop]:
@@ -74,22 +73,24 @@ class PS3Controller:
         # set driving speed
         self.__msg+= str(int(50 *( -joy.axes[self.__drive] + joy.axes[self.__reverse])))
         self.__msg+= ","
-
+    
+        #set brake
         if joy.buttons[self.__brake]:
             self.__msg += "1,"
         else:
             self.__msg += "0,"
             self.__msg += str(generate_checksum(self.__msg.split(","),False))
             self.__msg += "\n"
-        #print self.__msg
-
-        if time.clock() - self.__old_time >= 0.1:
+        
+        freq = 10.0
+        #reduce the controller frequency to 10Hz and write to the arduino
+        if time.clock() - self.__old_time >= (1.0/freq):
             _arduino_serial_port.write(self.__msg)
             #_arduino_serial_port.flush()
             self.__old_time = time.clock()
             print self.__msg
         self.__old_msg = self.__msg
-        self.__msg = "r,"
+        self.__msg = "r,"    #reset message
 
 #thread that handles incoming messages from the arduino
 class ArduinoMonitor (threading.Thread):
@@ -127,23 +128,19 @@ class ArduinoMonitor (threading.Thread):
         self.__imuMsg.linear_acceleration_covariance = [ 0.04 , 0 , 0,
                                                          0 , 0.04, 0,
                                                          0 , 0 , 0.04 ]
-        #rospy.init_node('arduino_monitor', anonymous=True)
-        #rate = rospy.Rate(10) # 10hz
 
     def run(self):
         while self.__running:
-            #time.sleep(.02)
+            #if data is available in the serial buffer
             if _arduino_serial_port.inWaiting():
-                #print "theres something!"
+                #read a line
                 self.__sensorMsg = _arduino_serial_port.readline()
-                #print self.__sensorMsg
                 self.__sensorReadings = self.__sensorMsg.split(',')
-                #print "I just split the msg"
                 #print self.__sensorReadings
 
                 #checksum check
                 if not(self.data_is_valid(self.__sensorReadings)):
-                    pass
+                    pass #wait for the next message to come in
                 #valid message
                 else:
                     #Publish IMU
@@ -170,20 +167,20 @@ class ArduinoMonitor (threading.Thread):
                         self.__battery_pub.publish(self.__batteryLevel)
                         #print "IMU"
 
-                    #publish GPS
+                    #TODO publish GPS
                     elif self.__sensorReadings[0] == 'g':
                         print "GPS"
-                    #publish Ultra 1,4,6
+                    #publish Ultrasonic sensors 1,4,6
                     elif self.__sensorReadings[0] == 'u':
                         order_u = [5,0,3]
                         self.publish_ultrasonic(order_u)
                         #print "Ultra1"
-                    #publish Ultra 2,5
+                    #publish Ultrasonic sensors 2,5
                     elif self.__sensorReadings[0] == 'v':
                         order_v = [4,1]
                         self.publish_ultrasonic(order_v)
                         #print "Ultra2"
-                    #publish Ultra 3,7
+                    #publish Ultrasonic sensors 3,7
                     elif self.__sensorReadings[0] == 'w':
                         order_w = [6,2]
                         self.publish_ultrasonic(order_w)
