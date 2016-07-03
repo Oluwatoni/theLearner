@@ -26,15 +26,16 @@
 #define TWI_CMD_MASTER_WRITE 0x10
 #define TWI_CMD_MASTER_READ  0x20
 #define USART_BUFFER_SIZE 80 //NMEA sentences cannot be longer than 80 characters 
-#define MESSEAGE_TYPE_SIZE 6 //all _SIZE contain extra byte for checksum
-#define LATITUDE_SIZE 13
-#define LONGITUDE_SIZE 14
-#define TIME_SIZE 10
-#define SPEED_SIZE 6
-#define COURSE_SIZE 6
-#define ALTITUDE_SIZE 7
+#define MESSEAGE_TYPE_SIZE 5
+#define LATITUDE_SIZE 12 //all _SIZE contain extra byte for checksum except checksum and message_type
+#define LONGITUDE_SIZE 13
+#define TIME_SIZE 9
+#define SPEED_SIZE 5
+#define COURSE_SIZE 5
+#define ALTITUDE_SIZE 6
 #define TEMP_SIZE 50
-#define CHECKSUM_SIZE 2
+#define GPS_CHECKSUM_SIZE 2
+#define NUM_OF_MESSAGES 6
 
 char received_data[USART_BUFFER_SIZE];
 static char* first_char = received_data;
@@ -45,15 +46,22 @@ char longitude[LONGITUDE_SIZE];
 char altitude[ALTITUDE_SIZE];
 char speed[SPEED_SIZE];
 char course[COURSE_SIZE];
+static char I2C_checksum_array[NUM_OF_MESSAGES] = {'d','u','m','m','i','e'};
 uint8_t data_is_ready;
 
-void USART_Init( unsigned int ubrr);
-void USART_Transmit( unsigned char data );
+typedef enum data_type
+{
+  LAT,LONG,ALT,SPD,CRSE,TIME,NONE
+}gps_data_type_t;  
+
+void USART_Init( unsigned int);
+void USART_Transmit( unsigned char );
 unsigned char USART_Receive( void );
-unsigned char TWI_Act_On_Failure_In_Last_Transmission ( unsigned char TWIerrorMsg );
-void extractData(char* message_index);
-void printCharArray(char array[], uint8_t size);
-uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_commas);
-uint8_t compareCharArray(char a[], char b[], uint8_t size);
+unsigned char TWI_Act_On_Failure_In_Last_Transmission ( unsigned char );
+void extractData(char*);
+void printCharArray(char* , uint8_t);
+uint8_t fillCharArray(char* , char*, uint8_t, uint8_t, gps_data_type_t);
+uint8_t compareCharArray(char* , char* , uint8_t );
+void prepare_TWI_data (gps_data_type_t, char*, uint8_t);
 
 #endif /* INITIALIZATION_H_ */

@@ -28,7 +28,7 @@ byte filtered_distance [SONAR_NUM] = {};
 byte start_filter = 0;
 int steering, throttle, stop_requested;
 
-IMU Imu(50);//frequency in Hz
+IMU Imu(15);//frequency in Hz
 Learner_car Car;
 NewPing sonar[SONAR_NUM - 4] =       // Sensor object array.
 {
@@ -44,11 +44,12 @@ boolean input_string_complete = false;  // whether the string is complete
 
 void setup()
 {
+  Wire.begin();
   Imu.Setup();
   Car.Setup();
   Serial.begin(115200);
   sei();
-  UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
+//  UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
 
   for (int i = 0; i < SONAR_NUM; i++)
   {
@@ -77,30 +78,22 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 void loop()
 {
   sendGPSData();
-  /*
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData2();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData3();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
   now = millis();
-<<<<<<< HEAD
-  ultrasonicDelay(now,temp);
-=======
   ultrasonicDelay(now, temp);
->>>>>>> aebf4b0895b0e936ff408781b4ae9bd3d46fb251
-  */
+  Serial.println(millis());
 }
 
 //handles RC msgs
