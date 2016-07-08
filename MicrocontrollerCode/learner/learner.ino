@@ -76,31 +76,26 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 
 void loop()
 {
-  sendGPSData();
-  /*
+//  sendGPSData();
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
+
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData2();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
+
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData3();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
+
   now = millis();
-<<<<<<< HEAD
-  ultrasonicDelay(now,temp);
-=======
   ultrasonicDelay(now, temp);
->>>>>>> aebf4b0895b0e936ff408781b4ae9bd3d46fb251
-  */
+
 }
 
 //handles RC msgs
@@ -180,7 +175,7 @@ void USART_Transmit( unsigned char data )
   /* Put data into buffer, sends the data */
   UDR0 = data;
 }
-/*
+
 //Handle incoming commands
 
 ISR(USART_RX_vect)
@@ -205,5 +200,5 @@ ISR(USART_RX_vect)
 
   sei();
 }
-*/
+
 
