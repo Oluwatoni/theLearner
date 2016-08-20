@@ -60,30 +60,6 @@ uint8_t compareCharArray(char a[], char b[], uint8_t size)
 	return 1;
 }
 
-/*
-//Returns the amount of units to increment the pointer
-uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_commas)
-{
-	uint8_t move_pointer_by = 0;
-	for(int i = 0; i <= size; i++)
-	{
-		if(*pointer == ',' || *pointer == '\n')
-		{
-			no_of_commas--;
-			if (!no_of_commas)
-			{
-				move_pointer_by++;
-				break;
-			}
-		}
-		array[i] = (char)*pointer;
-		pointer++;
-		move_pointer_by++;
-	}
-	return move_pointer_by;
-}
-*/
-
 //Returns the amount of units to increment the pointer and takes a pointer to a checksum
 uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_commas, gps_data_type_t type)
 {
@@ -200,7 +176,6 @@ void prepare_TWI_data (gps_data_type_t type, char* data, uint8_t size)
   include_checksum[size] = I2C_checksum_array[type];
   TWI_Start_Transceiver_With_Data(include_checksum, size+1);
   //printCharArray(include_checksum, size+1);
-  
 }
 
 ISR(USART_RX_vect)

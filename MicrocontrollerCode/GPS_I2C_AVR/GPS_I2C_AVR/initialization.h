@@ -42,7 +42,7 @@ static char* first_char = received_data;
 static uint8_t usart_index = 0;
 char time[TIME_SIZE];
 char latitude[LATITUDE_SIZE];
-char longitude[LONGITUDE_SIZE];
+char longitude[LONGITUDE_SSIZE];
 char altitude[ALTITUDE_SIZE];
 char speed[SPEED_SIZE];
 char course[COURSE_SIZE];
