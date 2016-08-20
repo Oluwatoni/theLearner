@@ -169,6 +169,7 @@ class ArduinoMonitor (threading.Thread):
 
                     #TODO publish GPS
                     elif self.__sensorReadings[0] == 'g':
+                        self.p
                         print "GPS"
                     #publish Ultrasonic sensors 1,4,6
                     elif self.__sensorReadings[0] == 'u':

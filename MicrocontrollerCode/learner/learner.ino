@@ -78,22 +78,45 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 void loop()
 {
   sendGPSData();
+<<<<<<< HEAD
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
+  
+=======
+  /*
+  sendUltrasonicData1();
+  temp = millis();
+  sendImuData();
+//  Car.Instruct(steering, throttle);
+>>>>>>> parent of d7d7a8f... not sure
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData2();
   temp = millis();
   sendImuData();
+//  Car.Instruct(steering, throttle);
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData3();
   temp = millis();
   sendImuData();
+<<<<<<< HEAD
+  
+=======
+//  Car.Instruct(steering, throttle);
+>>>>>>> parent of d7d7a8f... not sure
   now = millis();
+<<<<<<< HEAD
+  ultrasonicDelay(now,temp);
+=======
   ultrasonicDelay(now, temp);
-  Serial.println(millis());
+<<<<<<< HEAD
+  //Serial.println(millis());
+=======
+>>>>>>> aebf4b0895b0e936ff408781b4ae9bd3d46fb251
+  */
+>>>>>>> parent of d7d7a8f... not sure
 }
 
 //handles RC msgs
