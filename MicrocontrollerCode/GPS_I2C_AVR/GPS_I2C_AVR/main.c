@@ -20,52 +20,55 @@ int main(void)
 	// Start the TWI transceiver to enable reception of the first command from the TWI Master.
 	sei();
 	TWI_Start_Transceiver();
-  char temp = 'i';
+  unsigned char request = 'i';
 	
+  
 	while (1) 
   {
 		if ( !TWI_Transceiver_Busy() )
 		{
 			if ( TWI_statusReg.RxDataInBuf )
 			{
-				TWI_Get_Data_From_Transceiver(&temp, 1); 
-				switch (temp)
+				TWI_Get_Data_From_Transceiver(&request, 1); 
+        TWI_Start_Transceiver();
+				switch (request)
 				{
 					//a for latitude
 					case 'a':
-						TWI_Start_Transceiver_With_Data(latitude, LATITUDE_SIZE);
-						printCharArray(latitude,LATITUDE_SIZE);
+            prepare_TWI_data(LAT,latitude,LATITUDE_SIZE);
 						break;
-					//b for longitude
+					
+          //b for longitude
 					case 'b':
-						TWI_Start_Transceiver_With_Data(longitude, LONGITUDE_SIZE);
-						printCharArray(longitude,LONGITUDE_SIZE);
+            prepare_TWI_data(LONG,longitude,LONGITUDE_SIZE);
 						break;
-					//c for time
+					
+          //c for time
 					case 'c':
-						TWI_Start_Transceiver_With_Data(time, TIME_SIZE);
-						printCharArray(time, TIME_SIZE);
+            prepare_TWI_data(TIME,time,TIME_SIZE);
 						break;
-					//d for speed
+					
+          //d for speed
 					case 'd':
-						TWI_Start_Transceiver_With_Data(speed, SPEED_SIZE);
-						printCharArray(speed, SPEED_SIZE);
+            prepare_TWI_data(SPD,speed,SPEED_SIZE);
 						break;
-					//e for course
+					
+          //e for course
 					case 'e':
-						TWI_Start_Transceiver_With_Data(course, COURSE_SIZE);
-						printCharArray(course, COURSE_SIZE);
+            prepare_TWI_data(CRSE,course,COURSE_SIZE);
 						break;
-					//f for altitude
+					
+          //f for altitude
 					case 'f':
-						TWI_Start_Transceiver_With_Data(altitude, ALTITUDE_SIZE);
-						printCharArray(altitude, ALTITUDE_SIZE);
+            prepare_TWI_data(ALT,altitude,ALTITUDE_SIZE);
 						break;
+            
 					default:
-            TWI_Start_Transceiver_With_Data(altitude, ALTITUDE_SIZE);
+            TWI_Start_Transceiver_With_Data(NULL, NULL);
 						break;
 				} 
 			}
 		}
+    request = 'i';
   }
 }

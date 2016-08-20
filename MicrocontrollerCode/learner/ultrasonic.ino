@@ -1,6 +1,5 @@
 void ultrasonicRead1()
 {
-
   Wire.beginTransmission(MCU1_I2C);
   Wire.write(56);                            //exotic byte to sync the communication with MCU2
   Wire.endTransmission();

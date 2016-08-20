@@ -89,27 +89,56 @@ void sendGPSData()
     c-time
     d-speed
     e-course
+    f-altitude
   */
-  String GPS_msg = "g,";
-  byte len[5] = {12,13,9,5,5};
-  char req = 'a';
-  for (int i = 0; i< 5;i++)
+  
+  ///TODO add more character filters eg only permit (N,S,E,W and others necessary for checksum)
+  String GPS_msg = "g,",GPS_msg_part;
+  byte len[6] = {13,14,10,6,6,7};
+  char req = 'a', temp = 0;
+
+  for(int i = 0; i < sizeof(len);i++)
   {
-    Wire.beginTransmission(0x10);
-    Wire.write((char)req+i);
-    Wire.endTransmission();
-    Wire.requestFrom(0x10,len[i]);
-    
-    for(int j = 0; j < len[i]; j++)
+    long start_time= millis();
+    //repeats until i2c data of the correct size is recieved
+    while(1)
     {
-      while (!Wire.available());
-      char temp = Wire.read();
-      //if (temp != ' ')
-      GPS_msg.concat(temp);
+      if((millis()-start_time)>20)
+      {
+        GPS_msg_part = "ERR";
+        break;
+      }
+      
+      GPS_msg_part = "";
+      Wire.beginTransmission(0x10);
+      Wire.write((char)req+i);
+      Wire.endTransmission();
+      Wire.requestFrom(0x10,len[i]);
+      
+      temp = Wire.read();
+      if(temp == 'E')
+      {
+        GPS_msg_part = "ERR";
+        break;
+      }
+      GPS_msg_part.concat(temp);
+      while (Wire.available())
+      {
+        temp = Wire.read();
+        if(temp > 43 && temp < 122)//restricting it to numbers and letters
+          GPS_msg_part.concat(temp);
+      }
+      GPS_msg_part = GPS_msg_part.substring(0,GPS_msg_part.length()-1);
+      
+      if(GPS_msg_part.length() == ((temp-'0')))
+        break;
     }
-    GPS_msg.concat(',');  
-    // echo out whatever we get back
+    GPS_msg.concat(GPS_msg_part);
+    GPS_msg.concat(',');
   }
+  char buffer[GPS_msg.length()];
+  GPS_msg.toCharArray(buffer, GPS_msg.length());
+  GPS_msg.concat(generateChecksum(buffer, GPS_msg.length()));
   Serial.println(GPS_msg);
 }
 

@@ -60,12 +60,12 @@ uint8_t compareCharArray(char a[], char b[], uint8_t size)
 	return 1;
 }
 
+/*
 //Returns the amount of units to increment the pointer
 uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_commas)
 {
 	uint8_t move_pointer_by = 0;
-  uint16_t total = 0;
-	for(int i = 0; i < size; i++)
+	for(int i = 0; i <= size; i++)
 	{
 		if(*pointer == ',' || *pointer == '\n')
 		{
@@ -77,20 +77,46 @@ uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_c
 			}
 		}
 		array[i] = (char)*pointer;
-    total+= array[i];
 		pointer++;
 		move_pointer_by++;
 	}
-  total %= 255;
-  array[size-1] = (char) total;
 	return move_pointer_by;
+}
+*/
+
+//Returns the amount of units to increment the pointer and takes a pointer to a checksum
+uint8_t fillCharArray(char array[], char* pointer, uint8_t size, uint8_t no_of_commas, gps_data_type_t type)
+{
+  uint8_t move_pointer_by = 0;
+  uint8_t total = 0;
+
+  for(total; total <= size; total++)
+  {
+    if(*pointer == ',' || *pointer == '\n')
+    {
+      no_of_commas--;
+      if (!no_of_commas)
+      {
+        move_pointer_by++;
+        break;
+      }
+    }
+    array[total] = (char)*pointer;
+    pointer++;
+    move_pointer_by++;
+  }
+
+  if(type != NONE)
+    I2C_checksum_array[type] = (char)(total+'0');
+  
+  return move_pointer_by;
 }
 
 void printCharArray(char array[], uint8_t size)
 {
 	for (uint8_t i = 0;i < size; i++)
 	{
-		USART_Transmit(array[i]);
+		USART_Transmit(*(array++));
 	}
 	USART_Transmit('\n');
 }
@@ -108,26 +134,28 @@ void extractData(char* message_index)
 	char temp_course[COURSE_SIZE] = {'E','R','4'};
 	char temp_altitude[ALTITUDE_SIZE] = {'E','R','5'};
 	char temp[TEMP_SIZE];
-	char message_checksum[CHECKSUM_SIZE];
+	char message_checksum[GPS_CHECKSUM_SIZE];
 	
 	if (*message_index == '$')
 	{		
 		message_index++;
-		message_index += fillCharArray(message_type, message_index, MESSEAGE_TYPE_SIZE,1);
+		message_index += fillCharArray(message_type, message_index, MESSEAGE_TYPE_SIZE,1, NONE);
 		if (compareCharArray(message_type, gprmc, MESSEAGE_TYPE_SIZE))
 		{
 			//sample gprmc "$GPRMC,054313.80,A,4328.72490,N,08032.14223,W,0.075,,090416,,,A*68"
-			message_index += fillCharArray(temp_time, message_index, TIME_SIZE,1);
+
+			message_index += fillCharArray(temp_time, message_index, TIME_SIZE,1, TIME);
+
 			if(*message_index == 'A')
 			{
 				message_index += 2;
-				message_index += fillCharArray(temp_latitude, message_index, LATITUDE_SIZE,2);
-				message_index += fillCharArray(temp_longitude, message_index, LONGITUDE_SIZE,2);
-				message_index += fillCharArray(temp_speed, message_index, SPEED_SIZE,1);
-				message_index += fillCharArray(temp_course, message_index, COURSE_SIZE,1);
-				message_index += fillCharArray(temp, message_index, TEMP_SIZE, 3);
+				message_index += fillCharArray(temp_latitude, message_index, LATITUDE_SIZE,2, LAT);
+				message_index += fillCharArray(temp_longitude, message_index, LONGITUDE_SIZE,2, LONG);
+				message_index += fillCharArray(temp_speed, message_index, SPEED_SIZE,1, SPD);
+				message_index += fillCharArray(temp_course, message_index, COURSE_SIZE,1, CRSE);
+				message_index += fillCharArray(temp, message_index, TEMP_SIZE, 3, NONE);
 				message_index += 2;
-				fillCharArray(message_checksum, message_index, CHECKSUM_SIZE, 1);				
+				fillCharArray(message_checksum, message_index, GPS_CHECKSUM_SIZE, 1, NONE);				
 			}
 			/*
 			printCharArray(message_type, MESSEAGE_TYPE_SIZE);
@@ -136,8 +164,9 @@ void extractData(char* message_index)
 			printCharArray(temp_longitude, LONGITUDE_SIZE);
 			printCharArray(temp_speed, SPEED_SIZE);
 			printCharArray(temp_course, COURSE_SIZE);
-			printCharArray(message_checksum,CHECKSUM_SIZE);
+			printCharArray(message_checksum,GPS_CHECKSUM_SIZE);
 			*/
+      
       memcpy(time, temp_time, TIME_SIZE);
       memcpy(latitude, temp_latitude, LATITUDE_SIZE);
       memcpy(longitude, temp_longitude, LONGITUDE_SIZE);
@@ -148,17 +177,30 @@ void extractData(char* message_index)
 		else if(compareCharArray(message_type,gpgga,MESSEAGE_TYPE_SIZE))
 		{
 			//sample gpgga "$GPGGA,054313.80,4328.72490,N,08032.14223,W,1,09,0.97,344.8,M,-36.0,M,,*68"
-			message_index += fillCharArray(temp, message_index, TEMP_SIZE, 8);
-			fillCharArray(temp_altitude, message_index, ALTITUDE_SIZE,1);
-			/*
+			message_index += fillCharArray(temp, message_index, TEMP_SIZE, 8, NONE);
+			fillCharArray(temp_altitude, message_index, ALTITUDE_SIZE,1, ALT);
+			
+      /*
 			printCharArray(message_type, MESSEAGE_TYPE_SIZE);
 			printCharArray(temp_altitude, ALTITUDE_SIZE);
 			*/
+      
       memcpy(altitude, temp_altitude, ALTITUDE_SIZE);
 		}
 	}
+}
+
+void prepare_TWI_data (gps_data_type_t type, char* data, uint8_t size)
+{
+  //printCharArray(data,size);
+  //TWI_Start_Transceiver_With_Data(data, size);
   
-	
+  unsigned char include_checksum[size+1];
+  memcpy(include_checksum,data, size);
+  include_checksum[size] = I2C_checksum_array[type];
+  TWI_Start_Transceiver_With_Data(include_checksum, size+1);
+  //printCharArray(include_checksum, size+1);
+  
 }
 
 ISR(USART_RX_vect)
