@@ -19,6 +19,7 @@
 #define ULTRASONIC_DELAY 14
 #define SENSOR_WAVE_DELAY 20
 #define PRECISE 3
+#define IMU_PRINT_FREQ 15
 
 #define UART_RX_HARDWARE_ENABLE
 
@@ -28,7 +29,7 @@ byte filtered_distance [SONAR_NUM] = {};
 byte start_filter = 0;
 int steering, throttle, stop_requested;
 
-IMU Imu(15);//frequency in Hz
+IMU Imu(50);//frequency in Hz
 Learner_car Car;
 NewPing sonar[SONAR_NUM - 4] =       // Sensor object array.
 {
@@ -41,6 +42,7 @@ char input_string[15];         // a string to hold incoming data
 char * first_char = input_string;
 uint8_t input_string_index = 0;
 boolean input_string_complete = false;  // whether the string is complete
+boolean gps_send = true;
 
 void setup()
 {
@@ -49,8 +51,6 @@ void setup()
   Car.Setup();
   Serial.begin(115200);
   sei();
-//  UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
-
   for (int i = 0; i < SONAR_NUM; i++)
   {
     filtered_distance[i] = 0;
@@ -77,46 +77,27 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 
 void loop()
 {
-  sendGPSData();
-<<<<<<< HEAD
+  if(gps_send)
+    sendGPSData();
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
-  
-=======
-  /*
-  sendUltrasonicData1();
-  temp = millis();
-  sendImuData();
-//  Car.Instruct(steering, throttle);
->>>>>>> parent of d7d7a8f... not sure
+
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData2();
   temp = millis();
   sendImuData();
-//  Car.Instruct(steering, throttle);
+  
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData3();
   temp = millis();
   sendImuData();
-<<<<<<< HEAD
   
-=======
-//  Car.Instruct(steering, throttle);
->>>>>>> parent of d7d7a8f... not sure
   now = millis();
-<<<<<<< HEAD
-  ultrasonicDelay(now,temp);
-=======
   ultrasonicDelay(now, temp);
-<<<<<<< HEAD
-  //Serial.println(millis());
-=======
->>>>>>> aebf4b0895b0e936ff408781b4ae9bd3d46fb251
-  */
->>>>>>> parent of d7d7a8f... not sure
+  gps_send = !gps_send;
 }
 
 //handles RC msgs
@@ -196,7 +177,7 @@ void USART_Transmit( unsigned char data )
   /* Put data into buffer, sends the data */
   UDR0 = data;
 }
-/*
+
 //Handle incoming commands
 
 ISR(USART_RX_vect)
@@ -221,5 +202,5 @@ ISR(USART_RX_vect)
 
   sei();
 }
-*/
+
 

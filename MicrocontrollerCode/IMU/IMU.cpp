@@ -5,15 +5,15 @@ IMU::IMU(float frequency)
 {
   update_frequency = frequency;
   //default values
-  accel_min[0] = ((float) -276);
-  accel_max[0] = ((float) 261);
-  accel_min[1] = ((float) -255);
-  accel_max[1] = ((float) 274);
-  accel_min[2] = ((float) -275);
-  accel_max[2] = ((float) 247);
-  gyro_average[0] = ((float) -33.97);
-  gyro_average[1] = ((float) 38.41);
-  gyro_average[2] = ((float) 9.04);
+  accel_min[0] = ((float) -271);
+  accel_max[0] = ((float) 246);
+  accel_min[1] = ((float) -274);
+  accel_max[1] = ((float) 267);
+  accel_min[2] = ((float) -271);
+  accel_max[2] = ((float) 260);
+  gyro_average[0] = ((float) -36.58);
+  gyro_average[1] = ((float) -34);
+  gyro_average[2] = ((float) 9.55);
   accel_offset[0] = ((accel_min[0] + accel_max[0]) / 2.0f);
   accel_offset[1] = ((accel_min[1] + accel_max[1]) / 2.0f);
   accel_offset[2] = ((accel_min[2] + accel_max[2]) / 2.0f);
@@ -36,7 +36,7 @@ void IMU::Setup()
 
 void IMU::UpdateIMU() 
 {
-	if((millis() - timestamp) >= (int)(1.0 / update_frequency))
+	if((millis() - timestamp) >= (int)(1000.0 / update_frequency))
 	  {
 		timestamp_old = timestamp;
 		timestamp = millis();
@@ -116,9 +116,9 @@ void IMU::Read_Accel()
   {
     // No multiply by -1 for coordinate system transformation here, because of double negation:
     // We want the gravity vector, which is negated acceleration vector.
-    accel[1] = -1 * (((int) buff[3]) << 8) | buff[2];  // X axis (internal sensor y axis)
-    accel[0] = (((int) buff[1]) << 8) | buff[0];  // Y axis (internal sensor x axis)
-    accel[2] = (((int) buff[5]) << 8) | buff[4];  // Z axis (internal sensor z axis)
+    accel[0] = (int16_t)((((uint16_t) buff[3]) << 8) | buff[2]);  // X axis (internal sensor y axis)
+    accel[1] = (int16_t)((((uint16_t) buff[1]) << 8) | buff[0]);  // Y axis (internal sensor x axis)
+    accel[2] = (int16_t)((((uint16_t) buff[5]) << 8) | buff[4]);  // Z axis (internal sensor z axis)
   }
   else
   {
@@ -163,9 +163,9 @@ void IMU::Read_Magn()
   if (i == 6)  // All bytes received?
   {
     // MSB byte first, then LSB; Y and Z reversed: X, Z, Y
-    magnetom[1] = -1 * (((int) buff[0]) << 8) | buff[1];         // X axis (internal sensor x axis)
-    magnetom[0] = -1 * ((((int) buff[4]) << 8) | buff[5]);  // Y axis (internal sensor -y axis)
-    magnetom[2] = -1 * ((((int) buff[2]) << 8) | buff[3]);  // Z axis (internal sensor -z axis)
+    magnetom[0] = (int16_t)((((uint16_t) buff[0]) << 8) | buff[1]);         // X axis (internal sensor x axis)
+    magnetom[1] = -1 * (int16_t)(((((uint16_t) buff[4]) << 8) | buff[5]));  // Y axis (internal sensor -y axis)
+    magnetom[2] = -1 * (int16_t)(((((uint16_t) buff[2]) << 8) | buff[3]));  // Z axis (internal sensor -z axis)
   }
   else
   {
@@ -227,9 +227,9 @@ void IMU::Read_Gyro()
   
   if (i == 6)  // All bytes received?
   {
-    gyro[1] = ((((int) buff[2]) << 8) | buff[3]);    // X axis (internal sensor -y axis)
-    gyro[0] = -1 * ((((int) buff[0]) << 8) | buff[1]);    // Y axis (internal sensor -x axis)
-    gyro[2] = -1 * ((((int) buff[4]) << 8) | buff[5]);    // Z axis (internal sensor -z axis)
+    gyro[0] = -1 * (int16_t)(((((uint16_t) buff[2]) << 8) | buff[3]));    // X axis (internal sensor -y axis)
+    gyro[1] = -1 * (int16_t)(((((uint16_t) buff[0]) << 8) | buff[1]));    // Y axis (internal sensor -x axis)
+    gyro[2] = -1 * (int16_t)(((((uint16_t) buff[4]) << 8) | buff[5]));    // Z axis (internal sensor -z axis)
   }
   else
   {
