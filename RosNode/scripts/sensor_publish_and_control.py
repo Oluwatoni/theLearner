@@ -5,12 +5,14 @@ import signal
 import time
 import threading
 import rospy
+import numpy as np
 from tf.transformations import quaternion_from_euler
 from numpy import zeros
 from sensor_msgs.msg import Joy
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import Range
-from std_msgs.msg import Int16
+from sensor_msgs.msg import NavSatFix, NavSatStatus
+from std_msgs.msg import Int16, Float32, Time
 
 #read in serial port
 serial_port = sys.argv[1]
@@ -22,11 +24,6 @@ _arduino_serial_port.timeout = None
 def generate_checksum(data, check_if_number):
     sumOfBytes = 0
     for i in range(len(data)):
-        if check_if_number and (i > 0):
-            try:
-                float(data[i])
-            except ValueError:
-                return -1
         for char in data[i]:
             sumOfBytes += ord(char)
         sumOfBytes += ord(",")
@@ -42,6 +39,7 @@ class PS3Controller:
         self.__drive = 13                  # shift to Drive
         self.__reverse = 12                # shift to Reverse
         self.__brake = 13
+	self.__run_suspend = 6
         self.__auto = False
         #Arduino control msg
         self.__msg = "r,"   #r indicates the start of a message
@@ -55,23 +53,16 @@ class PS3Controller:
         "invoked every time a joystick message arrives"
         #rospy.logdebug('joystick input:\n' + str(joy))
         
-        '''
-        # handle E-stop buttons
-         if joy.buttons[self.__estop]:
-            rospy.logwarn('emergency stop')
-            self.__msg = "e"
-        #TODO add estop routine
-        '''
         if joy.buttons[self.__run_suspend]:
             self.__auto = not(self.__auto)
             rospy.logwarn('autonomous mode' + str(self.__auto))
 
         # set steering angle
-        self.__msg+= str(int(-100 * joy.axes[self.__steer]))
+        self.__msg+= str(int(-80 * joy.axes[self.__steer]))
         self.__msg+= ","
 
         # set driving speed
-        self.__msg+= str(int(50 *( -joy.axes[self.__drive] + joy.axes[self.__reverse])))
+        self.__msg+= str(int(100 *( -joy.axes[self.__drive] + joy.axes[self.__reverse])))
         self.__msg+= ","
     
         #set brake
@@ -105,8 +96,10 @@ class ArduinoMonitor (threading.Thread):
         self.__sensorMsg = ""
         self.__sensorReadings = []
         self.__ultrasonicData = zeros(7)
-        self.__imuMsg = Imu()#Yaw,Pitch,Roll,Accel x,y,z,gyro x,y,z
+        self.__imu_msg = Imu()#Yaw,Pitch,Roll,Accel x,y,z,gyro x,y,z
+        self.__batteryLevels = zeros(20)
         self.__batteryLevel = 0
+        self.__robot_time = 0
         self.__ultrasonic_pub = []
         self.__ultrasonic_msg = Range()
         self.__ultrasonic_msg.range = 0.0
@@ -114,25 +107,40 @@ class ArduinoMonitor (threading.Thread):
         self.__ultrasonic_msg.radiation_type = self.__ultrasonic_msg.ULTRASOUND
         self.__ultrasonic_msg.min_range = 0.0
         self.__ultrasonic_msg.max_range = 2.5
+        self.__gps_msg = NavSatFix()
+        self.__gps_status = NavSatStatus()
+
         for i in range(7):
             self.__ultrasonic_pub.append(rospy.Publisher('arduino_sensors/ultrasonic_'+str(i),Range,queue_size = 1))
         self.__battery_pub = rospy.Publisher('arduino_sensors/battery_level', Int16,queue_size = 1)
+        self.__robot_time_pub = rospy.Publisher('arduino_sensors/robot_time', Float32,queue_size = 1)
         self.__imu_pub = rospy.Publisher('arduino_sensors/imu',Imu,queue_size = 1)
-        self.__imuMsg.header.frame_id = 'learner_imu_link'
-        self.__imuMsg.orientation_covariance = [ 0.0025 , 0 , 0,
+        self.__imu_msg.header.frame_id = 'learner_imu_link'
+        self.__imu_msg.orientation_covariance = [ 0.0025 , 0 , 0,
                                                  0, 0.0025, 0,
                                                  0, 0, 0.0025 ]
-        self.__imuMsg.angular_velocity_covariance = [ 0.02, 0 , 0,
+        self.__imu_msg.angular_velocity_covariance = [ 0.02, 0 , 0,
                                                       0 , 0.02, 0,
                                                       0 , 0 , 0.02 ]
-        self.__imuMsg.linear_acceleration_covariance = [ 0.04 , 0 , 0,
+        self.__imu_msg.linear_acceleration_covariance = [ 0.04 , 0 , 0,
                                                          0 , 0.04, 0,
                                                          0 , 0 , 0.04 ]
+        self.__gps_status.status = self.__gps_status.STATUS_NO_FIX
+        self.__gps_status.service = self.__gps_status.SERVICE_GPS
+        self.__gps_pub = rospy.Publisher('arduino_sensors/gps',NavSatFix,queue_size = 1)
+        self.__gps_msg.header.frame_id = 'learner_gps_link'
+        self.__gps_msg.position_covariance_type = self.__gps_msg.COVARIANCE_TYPE_APPROXIMATED
+        self.__gps_msg.status = self.__gps_status
+        #TODO Observe GPS Data and determine Covariance
+        self.__gps_msg.position_covariance = [ 1.0 , 0 , 0,
+                                                 0, 1.0, 0,
+                                                 0, 0, 1.0 ]
 
     def run(self):
         while self.__running:
             #if data is available in the serial buffer
-            if _arduino_serial_port.inWaiting():
+
+            if (_arduino_serial_port.in_waiting != 0):
                 #read a line
                 self.__sensorMsg = _arduino_serial_port.readline()
                 self.__sensorReadings = self.__sensorMsg.split(',')
@@ -140,37 +148,68 @@ class ArduinoMonitor (threading.Thread):
 
                 #checksum check
                 if not(self.data_is_valid(self.__sensorReadings)):
-                    pass #wait for the next message to come in
+                    continue #wait for the next message to come in
                 #valid message
+                try:
+                    self.__sensorReadings[0]
+                except IndexError:
+                    continue
+                    
                 else:
                     #Publish IMU
                     if self.__sensorReadings[0] == 'i':
                         yaw =  float(self.__sensorReadings[1])
                         pitch = float(self.__sensorReadings[2])
                         roll = float(self.__sensorReadings[3])
-                        self.__imuMsg.linear_acceleration.x = -float(self.__sensorReadings[4]) * self.__accel_factor
-                        self.__imuMsg.linear_acceleration.y = float(self.__sensorReadings[5]) * self.__accel_factor
-                        self.__imuMsg.linear_acceleration.z = float(self.__sensorReadings[6]) * self.__accel_factor
-                        self.__imuMsg.angular_velocity.x = float(self.__sensorReadings[7])
-                        self.__imuMsg.angular_velocity.y = -float(self.__sensorReadings[8])
-                        self.__imuMsg.angular_velocity.z = -float(self.__sensorReadings[9])
+                        self.__imu_msg.linear_acceleration.x = -float(self.__sensorReadings[4]) * self.__accel_factor
+                        self.__imu_msg.linear_acceleration.y = float(self.__sensorReadings[5]) * self.__accel_factor
+                        self.__imu_msg.linear_acceleration.z = float(self.__sensorReadings[6]) * self.__accel_factor
+                        self.__imu_msg.angular_velocity.x = float(self.__sensorReadings[7])
+                        self.__imu_msg.angular_velocity.y = -float(self.__sensorReadings[8])
+                        self.__imu_msg.angular_velocity.z = -float(self.__sensorReadings[9])
                         q = quaternion_from_euler(roll,pitch,yaw)
-                        self.__imuMsg.orientation.x = q[0]
-                        self.__imuMsg.orientation.y = q[1]
-                        self.__imuMsg.orientation.z = q[2]
-                        self.__imuMsg.orientation.w = q[3]
-                        self.__imuMsg.header.stamp = rospy.Time.now()
-                        self.__imuMsg.header.seq = self.__seq
+                        self.__imu_msg.orientation.x = q[0]
+                        self.__imu_msg.orientation.y = q[1]
+                        self.__imu_msg.orientation.z = q[2]
+                        self.__imu_msg.orientation.w = q[3]
+                        self.__imu_msg.header.stamp = rospy.Time.now()
+                        self.__imu_msg.header.seq = self.__seq
                         self.__seq += 1
-                        self.__imu_pub.publish(self.__imuMsg)
-                        self.__batteryLevel = int(self.__sensorReadings[10])
-                        self.__battery_pub.publish(self.__batteryLevel)
+                        self.__imu_pub.publish(self.__imu_msg)
+                        self.__batteryLevels = np.roll(self.__batteryLevels,-1)
+                        #print self.__batteryLevels
+                        self.__batteryLevels[19] = int(self.__sensorReadings[10])
+                        if self.__batteryLevels[0] != 0:
+                            self.__battery_pub.publish(self.__batteryLevels.mean())
                         #print "IMU"
 
                     #TODO publish GPS
                     elif self.__sensorReadings[0] == 'g':
-                        self.p
-                        print "GPS"
+                        #print self.__sensorReadings
+                        if self.__sensorReadings[1] != self.__sensorReadings[3]:
+                            try:
+                                float(self.__sensorReadings[1]) + float(self.__sensorReadings[3])
+                            except ValueError:
+                                continue
+
+                            if (self.__sensorReadings[2] == 'S'):
+                                self.__sensorReadings[1] = -float(self.__sensorReadings[1])
+                            if (self.__sensorReadings[4] == 'E'):
+                                self.__sensorReadings[3] = -float(self.__sensorReadings[3])
+                            self.__gps_msg.latitude = float(self.__sensorReadings[1])
+                            self.__gps_msg.longitude = float(self.__sensorReadings[3])
+                            try:
+                                self.__gps_msg.altitude = float(self.__sensorReadings[8])
+                            except ValueError:
+                                pass
+                            try:
+                                self.__robot_time = float(self.__sensorReadings[5])
+                            except ValueError:
+                                pass
+                            self.__gps_msg.header.stamp = rospy.Time.now()
+                            self.__gps_msg.header.seq = self.__seq
+                            self.__gps_pub.publish(self.__gps_msg)
+
                     #publish Ultrasonic sensors 1,4,6
                     elif self.__sensorReadings[0] == 'u':
                         order_u = [5,0,3]
@@ -213,6 +252,7 @@ class ArduinoMonitor (threading.Thread):
             print "invalid data"
             print checksum
             print generate_checksum(data,True)
+            print data
             return False
 
     #stops the thread

@@ -145,11 +145,11 @@ void extractData(char * msg, uint8_t msg_size)
   
   if (generateChecksum(temp, checksum_size) == raw_checksum.toInt())
   {
-    /*
+    
     Serial.println(raw_steering);
     Serial.println(raw_throttle);
     Serial.println(raw_stop);
-    */
+    
     temp_steering = raw_steering.toInt();
     temp_throttle = raw_throttle.toInt();
     temp_stop = raw_stop.toInt();
@@ -202,5 +202,4 @@ ISR(USART_RX_vect)
 
   sei();
 }
-
 

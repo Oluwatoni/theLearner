@@ -21,7 +21,7 @@ void sendImuData()
   msg.concat(",");
   msg.concat(Imu.GetGyroZ());
   msg.concat(",");
-  msg.concat(Car.GetBatteryLevel());
+  msg.concat(Car.GetBatteryLevel());//move to gps message
   msg.concat(",");
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
