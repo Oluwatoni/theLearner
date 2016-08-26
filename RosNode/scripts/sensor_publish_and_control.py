@@ -73,13 +73,13 @@ class PS3Controller:
             self.__msg += str(generate_checksum(self.__msg.split(","),False))
             self.__msg += "\n"
         
-        freq = 10.0
+        freq = 20.0
         #reduce the controller frequency to 10Hz and write to the arduino
         if time.clock() - self.__old_time >= (1.0/freq):
             _arduino_serial_port.write(self.__msg)
             #_arduino_serial_port.flush()
             self.__old_time = time.clock()
-            print self.__msg
+            #print self.__msg
         self.__old_msg = self.__msg
         self.__msg = "r,"    #reset message
 

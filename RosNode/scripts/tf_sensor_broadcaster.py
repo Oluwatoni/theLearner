@@ -45,7 +45,7 @@ if __name__ == '__main__':
                          "learner_ultrasonic_6_link",
                          "learner")
         br.sendTransform((0.04, 0.0, 0.07),
-                         quaternion_from_euler(3.142,3.142/2.0,3.142),
+                         quaternion_from_euler(0,0,(3.142/2)),
                          rospy.Time.now(),
                          "learner_imu_link",
                          "learner")

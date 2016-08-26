@@ -33,9 +33,9 @@ IMU Imu(50);//frequency in Hz
 Learner_car Car;
 NewPing sonar[SONAR_NUM - 4] =       // Sensor object array.
 {
-  NewPing(7, 8, MAX_DISTANCE), //ultra 5 // Each sensor's trigger pin, echo pin, and max distance to ping.
-  NewPing(A2, A3, MAX_DISTANCE),//ultra 7
-  NewPing(4, 2, MAX_DISTANCE)//ultra 6
+  NewPing(7, 7, MAX_DISTANCE), //ultra 5 // Each sensor's trigger pin, echo pin, and max distance to ping.
+  NewPing(A2, A2, MAX_DISTANCE),//ultra 7
+  NewPing(2, 2, MAX_DISTANCE)//ultra 6
 };
 
 char input_string[15];         // a string to hold incoming data
@@ -43,6 +43,7 @@ char * first_char = input_string;
 uint8_t input_string_index = 0;
 boolean input_string_complete = false;  // whether the string is complete
 boolean gps_send = true;
+volatile boolean sensitive_region = false;
 
 void setup()
 {
@@ -77,8 +78,9 @@ uint16_t generateChecksum(char data[], byte sizeOfData)
 
 void loop()
 {
-  if(gps_send)
-    sendGPSData();
+//  if(gps_send)
+//    sendGPSData();
+  sendImuData();
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
@@ -97,7 +99,7 @@ void loop()
   
   now = millis();
   ultrasonicDelay(now, temp);
-  gps_send = !gps_send;
+//  gps_send = !gps_send;
 }
 
 //handles RC msgs
@@ -145,17 +147,19 @@ void extractData(char * msg, uint8_t msg_size)
   
   if (generateChecksum(temp, checksum_size) == raw_checksum.toInt())
   {
-    
+    #ifdef DEBUG
     Serial.println(raw_steering);
     Serial.println(raw_throttle);
     Serial.println(raw_stop);
+    #endif
     
     temp_steering = raw_steering.toInt();
     temp_throttle = raw_throttle.toInt();
     temp_stop = raw_stop.toInt();
-    Car.Instruct(temp_steering, temp_throttle);
+    if(!sensitive_region)
+      Car.Instruct(temp_steering, temp_throttle);
   }
-  /*
+  #ifdef DEBUG
   else
   {
     for(int i = 0; i < checksum_size; i++)
@@ -166,23 +170,12 @@ void extractData(char * msg, uint8_t msg_size)
     Serial.println(raw_checksum);
     Serial.println(generateChecksum(temp, checksum_size));
   }
-  */
+  #endif
 }
-
-void USART_Transmit( unsigned char data )
-{
-  /* Wait for empty transmit buffer */
-  while ( !( UCSR0A & (1<<UDRE0)) )
-  ;
-  /* Put data into buffer, sends the data */
-  UDR0 = data;
-}
-
 //Handle incoming commands
 
 ISR(USART_RX_vect)
 {
-  //USART_Transmit(UDR0);
   cli();
   char temp = UDR0;
   if (temp == '\n')
@@ -199,7 +192,6 @@ ISR(USART_RX_vect)
     input_string[input_string_index] = temp;
     input_string_index++;
   }
-
   sei();
 }
 
