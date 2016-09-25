@@ -2,7 +2,7 @@
 
 import os
 
-libs = ["IMU", "learner_car"]
+libs = ["IMU", "Learner_car"]
 
 src = os.path.dirname(os.path.realpath(__file__))
 home = os.path.expanduser("~")
@@ -13,6 +13,6 @@ print dst
 
 # This creates a symbolic link on python in tmp directory
 for lib in libs:
-	os.symlink(src, dst+"/"+lib)
+	os.symlink(src +"/"+lib, dst+"/"+lib)
 
 print "symlink created"
