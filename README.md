@@ -1,5 +1,4 @@
-# theLearner
-The learner is a platform to learn localization, mapping and path planning. I'm currently implementing the robot localization using with an EKF.
+# TheLearner
+The learner is a mobile robotics platform built to learn mapping, localization and path planning. The learner sports seven ultrasonic sensors, a 9 DOF IMU and an accelerometer.
 
-The learner sports 7 30 degree ultrasonic sensors, a 9 DOF IMU and an accelerometer.
-Code for an NMEA parser is also in this repo. I will remove it from this project soon.
+I'm working on a state estimator node that uses an Extended Kalman Filter.
