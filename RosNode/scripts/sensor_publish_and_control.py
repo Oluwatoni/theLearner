@@ -112,7 +112,6 @@ class ArduinoMonitor (threading.Thread):
         for i in range(7):
             self.__ultrasonic_pub.append(rospy.Publisher('arduino_sensors/ultrasonic_'+str(i),Range,queue_size = 1))
         self.__battery_pub = rospy.Publisher('arduino_sensors/battery_level', Int16,queue_size = 1)
-        self.__robot_time_pub = rospy.Publisher('arduino_sensors/robot_time', Float32,queue_size = 1)
         self.__imu_pub = rospy.Publisher('arduino_sensors/imu',Imu,queue_size = 1)
         self.__imu_msg.header.frame_id = 'learner_imu_link'
         self.__imu_msg.orientation_covariance = [ 0.0025 , 0 , 0,
