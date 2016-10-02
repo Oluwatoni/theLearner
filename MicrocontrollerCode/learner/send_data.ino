@@ -1,6 +1,15 @@
+String appendChecksum(String msg)
+{
+  char buffer[msg.length()];
+  msg.toCharArray(buffer, msg.length());
+  msg.concat(generateChecksum(buffer, msg.length()));
+  return msg;
+}
+
 void sendImuData()
 {
   Imu.UpdateIMU();
+  sensor_clock.updateTime();
   String msg;
   msg.concat("i,");
   msg.concat(Imu.GetYaw());
@@ -21,19 +30,32 @@ void sendImuData()
   msg.concat(",");
   msg.concat(Imu.GetGyroZ());
   msg.concat(",");
-  msg.concat(Car.GetBatteryLevel());//move to gps message
+  msg.concat(Car.GetBatteryLevel());
   msg.concat(",");
-  char buffer[msg.length()];
-  msg.toCharArray(buffer, msg.length());
-  msg.concat(generateChecksum(buffer, msg.length()));
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
   Serial.println(msg);
 }
 
+void sendAccData()
+{
+  String msg;
+  msg.concat("a,");
+  msg.concat(analogRead(A0));//X_axis
+  msg.concat(",");
+  msg.concat(analogRead(A1));//Y_axis
+  msg.concat(",");
+  sensor_clock.updateTime();
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
+  Serial.println(msg);
+}
 void sendUltrasonicData1()//sends IMU data inbetween waves
 {
   ultrasonicRead1();
+  sensor_clock.updateTime();
   //!filter the readings from the above call
-  filterUltrasonicData(0,2);
+  filterUltrasonicData(0, 2);
   String msg;
   msg.concat("u,");
   msg.concat(filtered_distance[0]);
@@ -42,102 +64,91 @@ void sendUltrasonicData1()//sends IMU data inbetween waves
   msg.concat(",");
   msg.concat(filtered_distance[2]);
   msg.concat(",");
-  char buffer[msg.length()];
-  msg.toCharArray(buffer, msg.length());
-  msg.concat(generateChecksum(buffer, msg.length()));
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
   Serial.println(msg);
 }
 
 void sendUltrasonicData2()//sends IMU data inbetween waves
 {
   ultrasonicRead2();
+  sensor_clock.updateTime();
   //!filter the readings from the above call
-  filterUltrasonicData(3,4);
+  filterUltrasonicData(3, 4);
   String msg;
   msg.concat("v,");
   msg.concat(filtered_distance[3]);
   msg.concat(",");
   msg.concat(filtered_distance[4]);
   msg.concat(",");
-  char buffer[msg.length()];
-  msg.toCharArray(buffer, msg.length());
-  msg.concat(generateChecksum(buffer, msg.length()));
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
   Serial.println(msg);
 }
 
 void sendUltrasonicData3()//sends IMU data inbetween waves
 {
   ultrasonicRead3();
+  sensor_clock.updateTime();
   //!filter the readings from the above call
-  filterUltrasonicData(5,6);
+  filterUltrasonicData(5, 6);
   String msg;
   msg.concat("w,");
   msg.concat(filtered_distance[5]);
   msg.concat(",");
   msg.concat(filtered_distance[6]);
   msg.concat(",");
-  char buffer[msg.length()];
-  msg.toCharArray(buffer, msg.length());
-  msg.concat(generateChecksum(buffer, msg.length()));
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
   Serial.println(msg);
 }
 
-void sendGPSData()
+Clock:: Clock()
 {
-  /*a-latitude
-    b-longitude
-    c-time
-    d-speed
-    e-course
-    f-altitude
-  */
-  ///TODO add more character filters eg only permit (N,S,E,W and others necessary for checksum)
-  String GPS_msg = "g,",GPS_msg_part;
-  byte len[6] = {13,14,10,6,6,7};
-  char req = 'a', temp = 0;
-
-  for(int i = 0; i < sizeof(len);i++)
-  {
-    long start_time= millis();
-    //repeats until i2c data of the correct size is recieved
-    while(1)
-    {
-      if((millis()-start_time)>20)
-      {
-        GPS_msg_part = "ERR";
-        break;
-      }
-      
-      GPS_msg_part = "";
-      Wire.beginTransmission(0x10);
-      Wire.write((char)req+i);
-      Wire.endTransmission();
-      Wire.requestFrom(0x10,len[i]);
-      
-      temp = Wire.read();
-      if(temp == 'E')
-      {
-        GPS_msg_part = "ERR";
-        break;
-      }
-      GPS_msg_part.concat(temp);
-      while (Wire.available())
-      {
-        temp = Wire.read();
-        if(temp > 43 && temp < 122)//restricting it to numbers and letters
-          GPS_msg_part.concat(temp);
-      }
-      GPS_msg_part = GPS_msg_part.substring(0,GPS_msg_part.length()-1);
-      
-      if(GPS_msg_part.length() == ((temp-'0')))
-        break;
-    }
-    GPS_msg.concat(GPS_msg_part);
-    GPS_msg.concat(',');
-  }
-  char buffer[GPS_msg.length()];
-  GPS_msg.toCharArray(buffer, GPS_msg.length());
-  GPS_msg.concat(generateChecksum(buffer, GPS_msg.length()));
-  Serial.println(GPS_msg);
+  second = 0;
+  microsecond = 0;
+  last_update = micros();
 }
 
+//request time to set up the internal clock
+void Clock:: requestTime()
+{
+  String msg;
+  msg.concat("t,now,");
+  msg = appendChecksum(msg);
+  Serial.println(msg);
+  request_sent = micros();
+}
+
+void Clock:: setTime( uint32_t init_second, uint32_t init_microsecond)
+{
+  second = init_second;
+  microsecond = init_microsecond;
+  last_update = micros();
+#ifdef DEBUG
+  Serial.println(second);
+  Serial.println(microsecond);
+#endif
+}
+
+void Clock:: updateTime()
+{
+  long current_update = micros() - last_update;
+  second += current_update /1000000;
+  microsecond += current_update % 1000000;
+  if (microsecond > 1000000)
+  {
+    microsecond %= 1000000;
+    second += microsecond/1000000;
+  } 
+  last_update = micros();
+}
+
+String Clock:: appendTime(String msg)
+{
+  msg.concat(sensor_clock.second);
+  msg.concat(",");
+  msg.concat(sensor_clock.microsecond);
+  msg.concat(",");
+  return msg;
+}

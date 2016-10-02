@@ -11,9 +11,9 @@ from numpy import zeros
 from sensor_msgs.msg import Joy
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import Range
-from sensor_msgs.msg import NavSatFix, NavSatStatus
 from std_msgs.msg import Int16, Float32, Time
 
+time.sleep(5)
 #read in serial port
 serial_port = sys.argv[1]
 
@@ -90,13 +90,14 @@ class ArduinoMonitor (threading.Thread):
         threading.Thread.__init__(self)
         self.__threadID = threadID
         self.__name = name
-        self.__accel_factor = 9.806 / 256.0
+        self.__imu_accel_factor = 9.806 / 256.0
         self.__seq = 0
         self.__running = 1
         self.__sensorMsg = ""
         self.__sensorReadings = []
         self.__ultrasonicData = zeros(7)
         self.__imu_msg = Imu()#Yaw,Pitch,Roll,Accel x,y,z,gyro x,y,z
+        self.__accelerometer = Imu()#Accx, Accy
         self.__batteryLevels = zeros(20)
         self.__batteryLevel = 0
         self.__robot_time = 0
@@ -107,8 +108,6 @@ class ArduinoMonitor (threading.Thread):
         self.__ultrasonic_msg.radiation_type = self.__ultrasonic_msg.ULTRASOUND
         self.__ultrasonic_msg.min_range = 0.0
         self.__ultrasonic_msg.max_range = 2.5
-        self.__gps_msg = NavSatFix()
-        self.__gps_status = NavSatStatus()
 
         for i in range(7):
             self.__ultrasonic_pub.append(rospy.Publisher('arduino_sensors/ultrasonic_'+str(i),Range,queue_size = 1))
@@ -125,22 +124,16 @@ class ArduinoMonitor (threading.Thread):
         self.__imu_msg.linear_acceleration_covariance = [ 0.04 , 0 , 0,
                                                          0 , 0.04, 0,
                                                          0 , 0 , 0.04 ]
-        self.__gps_status.status = self.__gps_status.STATUS_NO_FIX
-        self.__gps_status.service = self.__gps_status.SERVICE_GPS
-        self.__gps_pub = rospy.Publisher('arduino_sensors/gps',NavSatFix,queue_size = 1)
-        self.__gps_msg.header.frame_id = 'learner_gps_link'
-        self.__gps_msg.position_covariance_type = self.__gps_msg.COVARIANCE_TYPE_APPROXIMATED
-        self.__gps_msg.status = self.__gps_status
-        #TODO Observe GPS Data and determine Covariance
-        self.__gps_msg.position_covariance = [ 1.0 , 0 , 0,
-                                                 0, 1.0, 0,
-                                                 0, 0, 1.0 ]
 
     def run(self):
         while self.__running:
             #if data is available in the serial buffer
 
-            if (_arduino_serial_port.in_waiting != 0):
+            #try:
+            if _arduino_serial_port.in_waiting != 0:
+            #except IOError:
+            #   continue
+
                 #read a line
                 self.__sensorMsg = _arduino_serial_port.readline()
                 self.__sensorReadings = self.__sensorMsg.split(',')
@@ -156,14 +149,18 @@ class ArduinoMonitor (threading.Thread):
                     continue
                     
                 else:
+                    #publish second Accelerometer
+                    if self.__sensorReadings[0] == 'a':
+                        pass
+                         
                     #Publish IMU
-                    if self.__sensorReadings[0] == 'i':
+                    elif self.__sensorReadings[0] == 'i':
                         yaw =  float(self.__sensorReadings[1])
                         pitch = float(self.__sensorReadings[2])
                         roll = float(self.__sensorReadings[3])
-                        self.__imu_msg.linear_acceleration.x = -float(self.__sensorReadings[4]) * self.__accel_factor
-                        self.__imu_msg.linear_acceleration.y = float(self.__sensorReadings[5]) * self.__accel_factor
-                        self.__imu_msg.linear_acceleration.z = float(self.__sensorReadings[6]) * self.__accel_factor
+                        self.__imu_msg.linear_acceleration.x = -float(self.__sensorReadings[4]) * self.__imu_accel_factor
+                        self.__imu_msg.linear_acceleration.y = float(self.__sensorReadings[5]) * self.__imu_accel_factor
+                        self.__imu_msg.linear_acceleration.z = float(self.__sensorReadings[6]) * self.__imu_accel_factor
                         self.__imu_msg.angular_velocity.x = float(self.__sensorReadings[7])
                         self.__imu_msg.angular_velocity.y = -float(self.__sensorReadings[8])
                         self.__imu_msg.angular_velocity.z = -float(self.__sensorReadings[9])
@@ -172,7 +169,10 @@ class ArduinoMonitor (threading.Thread):
                         self.__imu_msg.orientation.y = q[1]
                         self.__imu_msg.orientation.z = q[2]
                         self.__imu_msg.orientation.w = q[3]
-                        self.__imu_msg.header.stamp = rospy.Time.now()
+                        #print "Time"
+                        #print int(str(rospy.Time.now()))- int(self.__sensorReadings[11] + self.__sensorReadings[12] + "000")
+                        self.__imu_msg.header.stamp.secs = int(self.__sensorReadings[11])
+                        self.__imu_msg.header.stamp.nsecs = int(self.__sensorReadings[12]) * 1000 
                         self.__imu_msg.header.seq = self.__seq
                         self.__seq += 1
                         self.__imu_pub.publish(self.__imu_msg)
@@ -181,49 +181,36 @@ class ArduinoMonitor (threading.Thread):
                         self.__batteryLevels[19] = int(self.__sensorReadings[10])
                         if self.__batteryLevels[0] != 0:
                             self.__battery_pub.publish(self.__batteryLevels.mean())
-                        #print "IMU"
-
-                    #TODO publish GPS
-                    elif self.__sensorReadings[0] == 'g':
-                        #print self.__sensorReadings
-                        if self.__sensorReadings[1] != self.__sensorReadings[3]:
-                            try:
-                                float(self.__sensorReadings[1]) + float(self.__sensorReadings[3])
-                            except ValueError:
-                                continue
-
-                            if (self.__sensorReadings[2] == 'S'):
-                                self.__sensorReadings[1] = -float(self.__sensorReadings[1])
-                            if (self.__sensorReadings[4] == 'E'):
-                                self.__sensorReadings[3] = -float(self.__sensorReadings[3])
-                            self.__gps_msg.latitude = float(self.__sensorReadings[1])
-                            self.__gps_msg.longitude = float(self.__sensorReadings[3])
-                            try:
-                                self.__gps_msg.altitude = float(self.__sensorReadings[8])
-                            except ValueError:
-                                pass
-                            try:
-                                self.__robot_time = float(self.__sensorReadings[5])
-                            except ValueError:
-                                pass
-                            self.__gps_msg.header.stamp = rospy.Time.now()
-                            self.__gps_msg.header.seq = self.__seq
-                            self.__gps_pub.publish(self.__gps_msg)
+                        #print "imu"
+    
+                    #send the current time to synchronize
+                    elif self.__sensorReadings[0] == 't':
+                        time_msg =  "t,"
+                        now = rospy.Time.now()
+                       	time_msg += (str(now.secs) + ",")
+                        time_msg += (str(now.nsecs/1000) + ",")
+                        time_msg += str(generate_checksum(time_msg.split(","),False))
+                        time_msg += "\n"
+                        #print time_msg
+                        _arduino_serial_port.write(time_msg); 
 
                     #publish Ultrasonic sensors 1,4,6
                     elif self.__sensorReadings[0] == 'u':
                         order_u = [5,0,3]
-                        self.publish_ultrasonic(order_u)
+                        rec_time = [self.__sensorReadings[4], self.__sensorReadings[5]]
+                        self.publish_ultrasonic(order_u,rec_time)
                         #print "Ultra1"
                     #publish Ultrasonic sensors 2,5
                     elif self.__sensorReadings[0] == 'v':
                         order_v = [4,1]
-                        self.publish_ultrasonic(order_v)
+                        rec_time =  [self.__sensorReadings[3], self.__sensorReadings[4]]
+                        self.publish_ultrasonic(order_v, rec_time)
                         #print "Ultra2"
                     #publish Ultrasonic sensors 3,7
                     elif self.__sensorReadings[0] == 'w':
                         order_w = [6,2]
-                        self.publish_ultrasonic(order_w)
+                        rec_time =  [self.__sensorReadings[3], self.__sensorReadings[4]]
+                        self.publish_ultrasonic(order_w, rec_time)
                         #print "Ultra3"
                     else:
                         print "Invalid"
@@ -231,11 +218,12 @@ class ArduinoMonitor (threading.Thread):
                 pass
 
     #publishes ultrasonic data in the order supplied
-    def publish_ultrasonic(self, order):
+    def publish_ultrasonic(self, order, time):
         for i in range(len(order)):
             self.__ultrasonic_msg.range = float(self.__sensorReadings[i+1]) / 100.0
             self.__ultrasonic_msg.header.frame_id = "learner_ultrasonic_" + str(order[i]) + "_link"
-            self.__ultrasonic_msg.header.stamp= rospy.Time.now()
+            self.__ultrasonic_msg.header.stamp.secs = int(time[0])
+            self.__ultrasonic_msg.header.stamp.nsecs = int(time[1]) * 1000
             self.__ultrasonic_msg.header.seq = self.__seq
             self.__ultrasonic_pub[order[i]].publish(self.__ultrasonic_msg)
             

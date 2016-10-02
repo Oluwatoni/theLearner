@@ -146,35 +146,16 @@ byte getMedian(byte (&myArray)[PRECISE])//fixxx
 
 void filterUltrasonicData(int first_index, int last_index)   // Sensor ping cycle complete, do something with the results.
 {
-  /*
-  if (start_filter <= (PRECISE - 1))
-  {
-    for (int i = 0; i < SONAR_NUM; i++)
-    {
-      filtering_distance[i][start_filter] = raw_distance[i];
-    }
 
-    start_filter++;
-  }*/
-  //TODO remove braces 
-  {
     for (int i = 1; i < PRECISE; i++)
-    {
       for (int n = first_index; n <= last_index; n++)
-      {
         filtering_distance[n][i - 1] = filtering_distance[n][i];
-      }
-    }
+        
+    for (int n = first_index; n <= last_index; n++)
+      filtering_distance[n][PRECISE - 1] = raw_distance[n];
       
     for (int n = first_index; n <= last_index; n++)
-    {
-      filtering_distance[n][PRECISE - 1] = raw_distance[n];
-    }
-    for (int n = first_index; n <= last_index; n++)
-    {
       filtered_distance[n] = getMedian(filtering_distance[n]);
-    }
-  }
 }
 
 void ultrasonicDelay(unsigned long now,unsigned long temp)
