@@ -49,7 +49,7 @@ if __name__ == '__main__':
                          rospy.Time.now(),
                          "learner_ultrasonic_6_link",
                          "learner/base_link")
-        br.sendTransform((0.04, 0.0, 0.07),
+        br.sendTransform((0.04, 0.0, 0.152),
                          quaternion_from_euler(0,0,(3.142/2)),
                          rospy.Time.now(),
                          "learner_imu_link",

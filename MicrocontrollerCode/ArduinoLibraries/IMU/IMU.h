@@ -45,10 +45,8 @@ private:
 	// Message format: "!ERR: reading <sensor>", followed by "\r\n".
 	boolean output_errors = false;  // true or false
 	float update_frequency;
-	const float magn_ellipsoid_center[3] = {-7.06708, 193.376, -92.7316};
-	const float magn_ellipsoid_transform[3][3] = {{0.926789, -0.0113183, -0.00410154}, 
-												{-0.0113183, 0.921324, -0.00429610}, 
-												{-0.00410154, -0.00429610, 0.999596}};	// Sensor variables
+    const float magn_ellipsoid_center[3] = {-18.3825, 188.858, -100.236};
+    const float magn_ellipsoid_transform[3][3] = {{0.936540, -0.0163372, 0.000545429}, {-0.0163372, 0.936401, 0.0137608}, {0.000545429, 0.0137608, 0.996872}};	// Sensor variables
 	float accel[3];  // Actually stores the NEGATED acceleration (equals gravity, if board not moving).
 	float accel_min[3];
 	float accel_max[3];
