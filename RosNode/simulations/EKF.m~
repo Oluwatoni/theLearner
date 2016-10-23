@@ -31,24 +31,17 @@ imu_covariance = [[0,0,0,0,0,0,0,0]; %imu measurement covariance matrix
                   [0,0,0,0,0,.25,0,0];
                   [0,0,0,0,0,0,.25,0];
                   [0,0,0,0,0,0,0,.25]];
-imu_jacobian= [[0,0,0,0,0,0,0,0]; 
-               [0,0,0,0,0,0,0,0];
-               [0,0,1,0,0,0,0,0];
-               [0,0,0,0,0,0,0,0];
-               [0,0,0,0,0,0,0,0];
-               [0,0,0,0,0,1,0,0];
-               [0,0,0,0,0,0,1,0];
-               [0,0,0,0,0,0,0,1]];
+imu_measurement_matrix = [[0,0,0,0,0,0,0,0]; 
+                            [0,0,0,0,0,0,0,0];
+                            [0,0,1,0,0,0,0,0];
+                            [0,0,0,0,0,0,0,0];
+                            [0,0,0,0,0,0,0,0];
+                            [0,0,0,0,0,1,0,0];
+                            [0,0,0,0,0,0,1,0];
+                            [0,0,0,0,0,0,0,1]];
 imu_measurements = zeros(8,1);
 K_imu = zeros(8,1);
-I = [[1,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
-     [0,1,0,0,0,0,0,0];
-     [0,0,1,0,0,0,0,0];
-     [0,0,0,1,0,0,0,0];
-     [0,0,0,0,1,0,0,0];
-     [0,0,0,0,0,1,0,0];
-     [0,0,0,0,0,0,1,0];
-     [0,0,0,0,0,0,0,1]];
+I = 
 
 for ii = 0:15
     [command(1), command(2)] = generate_command(ii);
@@ -119,10 +112,9 @@ for ii = 0:15
     for ii = 1:size(imu_measurements(:,1))
        imu_measurements(ii) = add_gauss_noise(imu_measurements(ii),imu_covariance(ii,ii));
     end
-    
-    measurement_error = imu_measurements - (imu_jacobian * state_est);
-    s_matrix = imu_jacobian * state_covariance * transpose(imu_jacobian) + imu_covariance;
-    K_imu = state_covariance * transpose(imu_jacobian) * inv(s_matrix);
+    measurement_error = imu_measurements - (imu_measurement_matrix * state_est);
+    s_matrix = imu_measurement_matrix * state_covariance * transpose(imu_measurement_matrix);
+    K_imu = state_covariance * transpose(imu_measurement_matrix) * inv(s_matrix);
     state_est = state_est + (K_imu * measurement_error);
-    state_covariance = (I - K_imu * imu_jacobian) * state_covariance;
+    state_covariance = ()
 end
