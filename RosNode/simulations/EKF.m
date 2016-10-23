@@ -8,23 +8,33 @@ state_est = zeros(8,1); %estimate of x_position, y_position, heading,
 state = zeros(8,1); %actual x_position, y_position, heading
                     %x_linear_velocity, y_linear velocity, angular velocity,
                     %x_angular acceleration,y_angular acceleration
+state(3) = pi;
+state_est(3) = state(3);
 new_state = zeros(8,1);
-state_covariance = [[100,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
-                    [0,100,0,0,0,0,0,0];
-                    [0,0,100,0,0,0,0,0];
-                    [0,0,0,100,0,0,0,0];
-                    [0,0,0,0,100,0,0,0];
-                    [0,0,0,0,0,100,0,0];
-                    [0,0,0,0,0,0,100,0];
-                    [0,0,0,0,0,0,0,100]];
+state_covariance = [[0,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
+                    [0,0,0,0,0,0,0,0];
+                    [0,0,0,0,0,0,0,0];
+                    [0,0,0,0,0,0,0,0];
+                    [0,0,0,0,10,0,0,0];
+                    [0,0,0,0,0,0,0,0];
+                    [0,0,0,0,0,0,10,0];
+                    [0,0,0,0,0,0,0,10]];
+motion_noise_covariance = [[1,0,0,0,0,0,0,0]; %process noise covariance matrix
+                           [0,1,0,0,0,0,0,0];
+                           [0,0,1,0,0,0,0,0];
+                           [0,0,0,1,0,0,0,0];
+                           [0,0,0,0,1,0,0,0];
+                           [0,0,0,0,0,1,0,0];
+                           [0,0,0,0,0,0,1,0];
+                           [0,0,0,0,0,0,0,1]];
 command = zeros(2,1);%throttle, steering
 vehicle_noise_vector = [[.3,0];%throttle variance and steering variance
                         [0,.25]];%across the diagonal
 dwb = 0.25; %distance between wheels
-imu_covariance = [[0,0,.1,0,0,0,0,0];%imu measurement covariance matrix
-                  [0,0,0,0,0,.25,0,0];
-                  [0,0,0,0,0,0,.25,0];
-                  [0,0,0,0,0,0,0,.25]];
+imu_covariance = [[.1,0,0,0];%imu measurement covariance matrix
+                  [0,.25,0,0];
+                  [0,0,.25,0];
+                  [0,0,0,.25]];
 imu_jacobian= [[0,0,1,0,0,0,0,0];
                [0,0,0,0,0,1,0,0];
                [0,0,0,0,0,0,1,0];
@@ -40,9 +50,13 @@ I = [[1,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
      [0,0,0,0,0,1,0,0];
      [0,0,0,0,0,0,1,0];
      [0,0,0,0,0,0,0,1]];
-
-for ii = 0:3
-    [command(1), command(2)] = generate_command(ii);
+ 
+txt = 'Starting point';
+text(0,0,txt);
+hold on;
+for ii = 1:50
+    
+ +   [command(1), command(2)] = generate_command(ii);
 
     %%%%%%%%%%%% prediction step %%%%%%%%%%%%%%%%%
     last_position = [state_est(1), state_est(2)];      % last Point
@@ -52,9 +66,9 @@ for ii = 0:3
                         [0,0,1,0,0,dt,0,0];
                         [0,0,0,1,0,0,dt,0];
                         [0,0,0,0,1,0,0,dt];
-                        [0,0,0,0,0,1,0,0];
-                        [0,0,0,0,0,0,1,0];
-                        [0,0,0,0,0,0,0,1]];
+                        [0,0,0,0,0,0,0,0];
+                        [0,0,0,0,0,0,0,0];
+                        [0,0,0,0,0,0,0,0]];
     %propagate the new state forward
     new_state = state_transition * state_est;
 
@@ -83,10 +97,11 @@ for ii = 0:3
                                  [0,0,1,0,0,dt,0,0];
                                  [0,0,0,1,0,0,dt,0];
                                  [0,0,0,0,1,0,0,dt];
-                                 [0,0,0,0,0,1,0,0];
-                                 [0,0,0,0,0,0,1,0];
-                                 [0,0,0,0,0,0,0,1];];
-    state_covariance = state_transition_jacobian * state_covariance * transpose(state_transition_jacobian);
+                                 [0,0,0,0,0,0,0,0];
+                                 [0,0,0,0,0,0,0,0];
+                                 [0,0,0,0,0,0,0,0];];
+    
+    state_covariance = state_transition_jacobian * state_covariance * transpose(state_transition_jacobian);% + motion_noise_covariance;
     %visualize results
     quiver(last_position(1),last_position(2),state_est(1) - last_position(1),state_est(2) - last_position(2),0,'MaxHeadSize',0.8,'color','red');
     hold on;
@@ -106,6 +121,13 @@ for ii = 0:3
     state(1) = state(1) + dt*command(1)*cos(state(3));
     state(2) = state(2) + dt*command(1)*sin(state(3));
     state(3) = state(3) + (dt*command(1)*tan(command(2)))/dwb;
+    
+    if(state(3) > pi)
+       state(3) = -pi + (state(3) - pi); 
+    elseif(state(3) < -pi)
+        state(3) = pi + (state(3) + pi);
+    end
+    
     state(4) = (state(1) - state(4)) / dt;
     state(5) = (state(2) - state(5)) / dt;
     state(6) = (state(3) - state(6)) / dt;
@@ -122,13 +144,17 @@ for ii = 0:3
     
     imu_list = [3,6,7,8];
     for jj = 1:size(imu_measurements(:,1))
-       imu_measurements(jj) = add_gauss_noise(state(imu_list(jj)),imu_covariance(jj,imu_list(jj)));
+       imu_measurements(jj) = add_gauss_noise(state(imu_list(jj)),imu_covariance(jj,jj));
     end
     
+    if(imu_measurements(1) > pi)
+       imu_measurements(1) = -pi + (imu_measurements(1) - pi); 
+    elseif(imu_measurements(1) < -pi)
+        imu_measurements(1) = pi + (imu_measurements(1) + pi);
+    end
     measurement_error = imu_measurements - (imu_jacobian * state_est);
-    s_matrix = imu_jacobian * state_covariance * transpose(imu_jacobian);% + imu_covariance;
-    inv(s_matrix)
-    K_imu = state_covariance * transpose(imu_jacobian) * inv(s_matrix);
+    s_matrix = imu_jacobian * state_covariance * transpose(imu_jacobian) + imu_covariance;
+    K_imu = state_covariance * transpose(imu_jacobian) * inv(s_matrix); %#ok<*MINV>
     state_est = state_est + (K_imu * measurement_error);
     state_covariance = (I - K_imu * imu_jacobian) * state_covariance;
     %visualize results
@@ -136,3 +162,9 @@ for ii = 0:3
     hold on;
     grid
 end
+txt = 'Final estimate';
+text(state_est(1),state_est(2),txt);
+hold on;
+txt = 'Final position';
+text(state(1),state(2),txt);
+hold on;

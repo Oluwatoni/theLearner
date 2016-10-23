@@ -1,5 +1,5 @@
 function [throttle, steering] = generate_command(time)
 %drive in a straight line
-    throttle = 2; %m/s
-    steering = 0.6; %radians
+    throttle = time/10; %m/s
+    steering = sin(time)/2 +.001; %radians
 end
