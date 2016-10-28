@@ -30,17 +30,40 @@ command = zeros(2,1);%throttle, steering
 vehicle_noise_vector = [[.3,0];%throttle variance and steering variance
                         [0,.25]];%across the diagonal
 dwb = 0.25; %distance between wheels
+
+%%%%%%%%%%%% sensors %%%%%%%%%%%%%%%%%
+%%%imu%%%
 imu_covariance = [[.0025,0,0,0];%imu measurement covariance matrix
                   [0,.02,0,0];
                   [0,0,.04,0];
                   [0,0,0,.04]];
-imu_jacobian= [[0,0,1,0,0,0,0,0];
+imu_jacobian = [[0,0,1,0,0,0,0,0];
                [0,0,0,0,0,1,0,0];
                [0,0,0,0,0,0,1,0];
                [0,0,0,0,0,0,0,1]];
 imu_measurements = zeros(4,1);%yaw, rotational velocity,
                               %x_linear_acceleration, y_linear_acceleration
 K_imu = zeros(8,1);
+imu_list = [3,6,7,8];
+
+%%%%encoder%%%
+encoder_covariance = [[.1,0];%imu measurement covariance matrix
+                      [0,.1]];
+encoder_jacobian = [[0,0,0,1,0,0,0,0];
+                    [0,0,0,0,1,0,0,0]];
+encoder_measurements = zeros(2,1);%x_linear_velocity, y_linear_velocity
+K_encoder = zeros(8,1);
+encoder_list = [4,5];
+%%%%accelerometer%%%
+accelerometer_covariance = [[.02,0];%imu measurement covariance matrix
+                            [0,.02]];
+accelerometer_jacobian = [[0,0,0,0,0,0,1,0];
+                          [0,0,0,0,0,0,0,1]];
+accelerometer_measurements = zeros(2,1);%x_linear_acceleration, y_linear_acceleration
+K_accelerometer = zeros(8,1);
+accelerometer_list = [7,8];
+
+
 I = [[1,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
      [0,1,0,0,0,0,0,0];
      [0,0,1,0,0,0,0,0];
@@ -49,7 +72,6 @@ I = [[1,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
      [0,0,0,0,0,1,0,0];
      [0,0,0,0,0,0,1,0];
      [0,0,0,0,0,0,0,1]];
- 
 txt = 'Starting point';
 text(0,0,txt);
 hold on;
@@ -118,7 +140,13 @@ for ii = 1:100
     
     state(4) = (state(1) - state(4)) / dt;
     state(5) = (state(2) - state(5)) / dt;
-    state(6) = (state(3) - state(6)) / dt;
+    if (state(3) < 0 && state(6) > 0)
+        state(6) = (2*pi -(state(3) - state(6))) / dt;
+    elseif (state(3) > 0 && state(6) < 0)
+         state(6) = (-2*pi + (state(3) - state(6))) / dt;
+    else
+        state(6) = (state(3) - state(6)) / dt;
+    end
     state(7) = (state(4) - state(7)) / dt;
     state(8) = (state(5) - state(8)) / dt;
     
@@ -130,7 +158,6 @@ for ii = 1:100
     %%%%%%%%%%%% prediction step %%%%%%%%%%%%%%%%%
     %generate measurements based on actual state  
     
-    imu_list = [3,6,7,8];
     for jj = 1:size(imu_measurements(:,1))
        imu_measurements(jj) = add_gauss_noise(state(imu_list(jj)),imu_covariance(jj,jj));
     end
@@ -140,12 +167,35 @@ for ii = 1:100
     elseif(imu_measurements(1) < -pi)
         imu_measurements(1) = pi + (imu_measurements(1) + pi);
     end
+    
+    for jj = 1:size(encoder_measurements(:,1))
+       encoder_measurements(jj) = add_gauss_noise(state(encoder_list(jj)),encoder_covariance(jj,jj));
+    end
+    
+    for jj = 1:size(accelerometer_measurements(:,1))
+       accelerometer_measurements(jj) = add_gauss_noise(state(accelerometer_list(jj)),accelerometer_covariance(jj,jj));
+    end
+    
+    %%imu update
     measurement_error = imu_measurements - (imu_jacobian * state_est);
     s_matrix = imu_jacobian * state_covariance * transpose(imu_jacobian) + imu_covariance;
     K_imu = state_covariance * transpose(imu_jacobian) * inv(s_matrix); %#ok<*MINV>
     state_est = state_est + (K_imu * measurement_error);
     state_covariance = (I - K_imu * imu_jacobian) * state_covariance;
+
+    %encoder update
+    measurement_error = encoder_measurements - (encoder_jacobian * state_est);
+    s_matrix = encoder_jacobian * state_covariance * transpose(encoder_jacobian) + encoder_covariance;
+    K_encoder = state_covariance * transpose(encoder_jacobian) * inv(s_matrix); %#ok<*MINV>
+    state_est = state_est + (K_encoder * measurement_error);
+    state_covariance = (I - K_encoder * encoder_jacobian) * state_covariance;
     
+    %accelerometer update
+    measurement_error = accelerometer_measurements - (accelerometer_jacobian * state_est);
+    s_matrix = accelerometer_jacobian * state_covariance * transpose(accelerometer_jacobian) + accelerometer_covariance;
+    K_accelerometer = state_covariance * transpose(accelerometer_jacobian) * inv(s_matrix); %#ok<*MINV>
+    state_est = state_est + (K_accelerometer * measurement_error);
+    state_covariance = (I - K_accelerometer * accelerometer_jacobian) * state_covariance;
     
     %visualize results
     quiver(last_position(1),last_position(2),state_est(1) - last_position(1),state_est(2) - last_position(2),0,'MaxHeadSize',0.8,'color','green');
