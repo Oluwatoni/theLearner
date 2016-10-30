@@ -55,8 +55,7 @@ txt = 'Starting point';
 text(0,0,txt);
 hold on;
 for ii = 1:50
-    
- +   [command(1), command(2)] = generate_command(ii);
+    [command(1), command(2)] = generate_command(ii);
 
     %%%%%%%%%%%% prediction step %%%%%%%%%%%%%%%%%
     last_position = [state_est(1), state_est(2)];      % last Point
@@ -161,6 +160,7 @@ for ii = 1:50
     quiver(last_position(1),last_position(2),state_est(1) - last_position(1),state_est(2) - last_position(2),0,'MaxHeadSize',0.8,'color','green');
     hold on;
     grid
+    
 end
 txt = 'Final estimate';
 text(state_est(1),state_est(2),txt);
