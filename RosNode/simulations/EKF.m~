@@ -75,9 +75,14 @@ I = [[1,0,0,0,0,0,0,0]; %state uncertainty covariance matrix
 txt = 'Starting point';
 text(0,0,txt);
 hold on;
+<<<<<<< HEAD
+for ii = 1:50
+    [command(1), command(2)] = generate_command(ii);
+=======
 
 for ii = 1:100
    [command(1), command(2)] = generate_command(ii);
+>>>>>>> d68981c59f05486c55adcd99f083837bae7d67ca
 
     %%%%%%%%%%%% prediction step %%%%%%%%%%%%%%%%%
     last_position = [state_est(1), state_est(2)];      % last Point
@@ -178,12 +183,12 @@ for ii = 1:100
     state_est = state_est + (K_encoder * measurement_error);
     state_covariance = (I - K_encoder * encoder_jacobian) * state_covariance;
     
-    %accelerometer update
-    measurement_error = accelerometer_measurements - (accelerometer_jacobian * state_est);
-    s_matrix = accelerometer_jacobian * state_covariance * transpose(accelerometer_jacobian) + accelerometer_covariance;
-    K_accelerometer = state_covariance * transpose(accelerometer_jacobian) * inv(s_matrix); %#ok<*MINV>
-    state_est = state_est + (K_accelerometer * measurement_error);
-    state_covariance = (I - K_accelerometer * accelerometer_jacobian) * state_covariance;
+%     %accelerometer update
+%     measurement_error = accelerometer_measurements - (accelerometer_jacobian * state_est);
+%     s_matrix = accelerometer_jacobian * state_covariance * transpose(accelerometer_jacobian) + accelerometer_covariance;
+%     K_accelerometer = state_covariance * transpose(accelerometer_jacobian) * inv(s_matrix); %#ok<*MINV>
+%     state_est = state_est + (K_accelerometer * measurement_error);
+%     state_covariance = (I - K_accelerometer * accelerometer_jacobian) * state_covariance;
     
     %visualize results
     quiver(last_position(1),last_position(2),state_est(1) - last_position(1),state_est(2) - last_position(2),0,'MaxHeadSize',0.8,'color','green');

@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+from sensor_msgs.msg import Joy
+
+class PS3Controller:
+    def __init__(self):
+        "PS3 controller node constructor"
+        #self._estop = 11                 # emergency stop
+        # tele-operation controls
+        self._steer = 0                  # steering axis
+        self._drive = 13                  # shift to Drive
+        self._reverse = 12                # shift to Reverse
+        self._brake = 13
+	self._run_suspend = 6
+        self._auto = False
+        #Arduino control msg
+        self._msg = "r,"   #r indicates the start of a message
+        self._old_msg = ""
+        self._old_time = time.clock()
+
+        # initialize ROS joystick suscriber
+        self._joy = rospy.Subscriber('joy', Joy, self.joy_callback)
+
+    def joy_callback(self, joy):
+        "invoked every time a joystick message arrives"
+        #rospy.logdebug('joystick input:\n' + str(joy))
+        
+        if joy.buttons[self._run_suspend]:
+            self._auto = not(self._auto)
+            rospy.logwarn('autonomous mode' + str(self._auto))
+
+        # set steering angle
+        self._msg+= str(int(-80 * joy.axes[self._steer]))
+        self._msg+= ","
+
+        # set driving speed
+        self._msg+= str(int(100 *( -joy.axes[self._drive] + joy.axes[self._reverse])))
+        self._msg+= ","
+    
+        #set brake
+        if joy.buttons[self._brake]:
+            self._msg += "1,"
+        else:
+            self._msg += "0,"
+            self._msg += str(generate_checksum(self._msg.split(","),False))
+            self._msg += "\n"
+        ''''
+        freq = 20.0
+        #reduce the controller frequency to 10Hz and write to the arduino
+        if time.clock() - self._old_time >= (1.0/freq):
+            _arduino_serial_port.write(self._msg)
+            #_arduino_serial_port.flush()
+            self._old_time = time.clock()
+            #print self._msg
+        self._old_msg = self._msg
+        self._msg = "r,"    #reset message
+        '''''
+

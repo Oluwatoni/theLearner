@@ -5,11 +5,12 @@
   http://projectsfromtech.blogspot.com/2014/01/i2c-hc-sr04-sonar-module-attiny85-i2c.html
 */
 #include <Wire.h>
-#include <IMU.h>
 #include <NewPing.h>
 #include <Servo.h>
-#include <Learner_car.h>
 #include <avr/interrupt.h>
+#include <Cristians_clock.h>
+#include <IMU.h>
+#include <Learner_car.h>
 
 #define UART_RX_HARDWARE_ENABLE
 
@@ -22,21 +23,6 @@
 #define ULTRASONIC_DELAY 13
 #define SENSOR_WAVE_DELAY 20
 #define PRECISE 3
-
-class Clock
-{
-  private:
-    uint32_t second;
-    uint32_t microsecond;
-    uint64_t last_update;
-  public:
-    Clock();
-    long request_sent;
-    String appendTime(String);
-    void updateTime();
-    void setTime(uint32_t, uint32_t);
-    void requestTime();
-};
 
 byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored
 byte filtering_distance [SONAR_NUM][PRECISE] = {};
@@ -76,19 +62,7 @@ void setup()
       filtering_distance[i][j] = 0;
   }
 }
-
 unsigned long temp = 0, now  = 0;
-
-//checksum to help validate msg
-
-uint8_t generateChecksum(char data[], char sizeOfData)
-{
-  uint32_t sum = 0;
-  while (sizeOfData)
-    sum += (uint8_t)data[--sizeOfData];
-  sum += 44;
-  return (sum % 255);
-}
 
 void loop()
 {
@@ -97,7 +71,7 @@ void loop()
     time_counter = 0;
     sensor_clock.requestTime();
   }
-  
+  sendAccData();
   sendImuData();
   sendUltrasonicData1();
   temp = millis();
@@ -238,7 +212,7 @@ void recieveTime(char * msg, uint8_t msg_size)
   int_second = raw_second.toInt();
   int_microsecond = raw_microsecond.toInt();
   
-    int_microsecond = int_microsecond;// + (recieved_time > sensor_clock.request_sent ? recieved_time - sensor_clock.request_sent: recieved_time + (0xFFFFFF - sensor_clock.request_sent))/2;
+    int_microsecond = int_microsecond;
     if (int_microsecond > 1000000)
     {
       int_microsecond %= 1000000;
