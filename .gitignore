@@ -45,3 +45,6 @@ Temporary Items
 #Vim temp files
 *.swp
 *.swo
+
+#temp files
+*.py~
