@@ -1,5 +1,4 @@
-void ultrasonicRead1()
-{
+void ultrasonicRead1(){
   Wire.beginTransmission(MCU1_I2C);
   Wire.write(56);                            //exotic byte to sync the communication with MCU2
   Wire.endTransmission();
@@ -25,7 +24,7 @@ void ultrasonicRead1()
   {
     delay((temp + ULTRASONIC_DELAY) - now); //make sure 15ms has elapsed before retrieving range data //TODO make define
   }
-  
+
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
   while (Wire.available() == 0)  ;
@@ -39,8 +38,7 @@ void ultrasonicRead1()
 
 }
 
-void ultrasonicRead2()
-{
+void ultrasonicRead2(){
   //beginning of second wave
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
@@ -65,7 +63,6 @@ void ultrasonicRead2()
 
 void ultrasonicRead3()
 {
-
   //beginning of third wave
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
@@ -84,82 +81,50 @@ void ultrasonicRead3()
   //end of third wave of sensor data
 }
 
-byte getMedian(byte (&myArray)[PRECISE])//fixxx
-{
-  int highest = 0, highestIndex = 0, count = 0;
-  int sort [PRECISE] = {};
-  int sorted [PRECISE] = {};
-  int sorted_freq [PRECISE] = {};
-  bool not_same = true;
+inline void swap(uint8_t* one, uint8_t* two) {
+  uint8_t temp = *one;
+  *one = *two;
+  *two = temp;
+}
 
-  for (int i = 0; i < PRECISE; i++)
-  {
+uint8_t getMedian(unsigned char myArray[FILTER_ARRAY_SIZE]) {
+  bool same = true;
+
+  for (int i = 0; i < FILTER_ARRAY_SIZE; i++) {
     if (myArray[0] != myArray[i])
-      not_same = false;
+      same = false;
   }
 
-  if (not_same)
-  {
-    for (int i = 0; i < PRECISE; i++)
-    {
-      if (myArray[i] > highest)
-      {
-        highest = myArray[i];
-        highestIndex = i;
-      }
-    }
-
-    for (int k = 0; k < highest; k++)
-    {
-      for (int i = 0; i < PRECISE; i++)
-      {
-        if ((highest - k) == myArray[i])
-        {
-          sort[count] = myArray[i];
-          for (int k = 0; k < PRECISE; k++)
-          {
-            if (sort[count] == myArray[k])
-            {
-              sorted_freq[count]++;
-              count++;
-            }
-          }
-        }
-      }
-    }
-    count = 0;
-    for (int i = 0; i < PRECISE; i++)
-    {
-      for (int k = 0; k < sorted_freq[i]; i++)
-      {
-        sorted[count] = sort[i];
-        count++;
-        if (count > (PRECISE - 1))
-          break;
-      }
-    }
-    return sorted[2];
+  if (!same) {
+    sort_array(myArray, FILTER_ARRAY_SIZE);
+    return myArray[FILTER_ARRAY_SIZE / 2];
   }
   else
-    return myArray[1];
+    return myArray[0];
 }
 
-void filterUltrasonicData(int first_index, int last_index)   // Sensor ping cycle complete, do something with the results.
-{
-
-    for (int i = 1; i < PRECISE; i++)
-      for (int n = first_index; n <= last_index; n++)
-        filtering_distance[n][i - 1] = filtering_distance[n][i];
-        
-    for (int n = first_index; n <= last_index; n++)
-      filtering_distance[n][PRECISE - 1] = raw_distance[n];
-      
-    for (int n = first_index; n <= last_index; n++)
-      filtered_distance[n] = getMedian(filtering_distance[n]);
+void sort_array(uint8_t * first_index, uint8_t size_of_array) {
+  int j;
+  for (int i = 1; i < size_of_array; i++) {
+    j = i;
+    while ((j > 0) && (first_index[j - 1] > first_index[j])) {
+      swap((first_index + j - 1), (first_index + j));
+      j = j - 1;
+    }
+  }
 }
 
-void ultrasonicDelay(unsigned long now,unsigned long temp)
-{
+void filterUltrasonicData(uint8_t first_index, uint8_t last_index) {  // Sensor ping cycle complete, do something with the results.
+  for (int i = first_index; i < last_index; i++) {
+    unfiltered_ultrasonic_data[i][last_measurement[i]] = raw_distance[i];
+    last_measurement[i]++;
+    if (last_measurement[i] == FILTER_ARRAY_SIZE)
+      last_measurement[i] = 0;
+    filtered_distance[i] = getMedian(unfiltered_ultrasonic_data[i]);
+  }
+}
+//ensures the echoes die down before pinging the sensors
+void ultrasonicDelay(unsigned long now, unsigned long temp){
   if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
     delay((temp + SENSOR_WAVE_DELAY) - now);
 }

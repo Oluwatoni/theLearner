@@ -1,5 +1,4 @@
-void sendImuData()
-{
+void sendImuData(){
   Imu.UpdateIMU();
   sensor_clock.updateTime();
   String msg;
@@ -29,10 +28,7 @@ void sendImuData()
   Serial.println(msg);
 }
 
-void sendAccData()
-{
-  long start_timer;
-  start_timer = micros();
+void sendAccData(){
   String msg;
   msg.concat("a,");
   msg.concat(analogRead(A0));//X_axis
@@ -43,11 +39,22 @@ void sendAccData()
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
   Serial.println(msg);
-  start_timer = micros()-start_timer;
-  Serial.println(start_timer);
 }
-void sendUltrasonicData1()//sends IMU data inbetween waves
-{
+
+void sendEncData(){
+  long start_timer;
+  start_timer = micros();
+  String msg;
+  msg.concat("e,");
+  msg.concat(readEncoderData());//X_axis
+  msg.concat(",");
+  sensor_clock.updateTime();
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
+  Serial.println(msg);
+}
+
+void sendUltrasonicData1(){
   ultrasonicRead1();
   sensor_clock.updateTime();
   //!filter the readings from the above call
@@ -65,8 +72,7 @@ void sendUltrasonicData1()//sends IMU data inbetween waves
   Serial.println(msg);
 }
 
-void sendUltrasonicData2()//sends IMU data inbetween waves
-{
+void sendUltrasonicData2(){
   ultrasonicRead2();
   sensor_clock.updateTime();
   //!filter the readings from the above call
@@ -82,8 +88,9 @@ void sendUltrasonicData2()//sends IMU data inbetween waves
   Serial.println(msg);
 }
 
-void sendUltrasonicData3()//sends IMU data inbetween waves
-{
+void sendUltrasonicData3(){
+  long start_timer;
+  start_timer = micros();
   ultrasonicRead3();
   sensor_clock.updateTime();
   //!filter the readings from the above call
@@ -98,5 +105,3 @@ void sendUltrasonicData3()//sends IMU data inbetween waves
   msg = appendChecksum(msg);
   Serial.println(msg);
 }
-
-

@@ -19,14 +19,17 @@
 #define MCU1_I2C 1
 #define MCU2_I2C 2
 #define SONAR_NUM 7
+#define FILTER_ARRAY_SIZE 3
 #define MAX_DISTANCE 250 //in cm
-#define ULTRASONIC_DELAY 13
+#define ULTRASONIC_DELAY 14
 #define SENSOR_WAVE_DELAY 20
-#define PRECISE 3
+#define WHEEL_CIRCUM 0.187
+#define ENCODER_ADDRESS 0x07
 
 byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored
-byte filtering_distance [SONAR_NUM][PRECISE] = {};
-byte filtered_distance [SONAR_NUM] = {};
+uint8_t unfiltered_ultrasonic_data[SONAR_NUM][FILTER_ARRAY_SIZE];
+uint8_t last_measurement[SONAR_NUM];
+uint8_t filtered_distance[SONAR_NUM];
 byte start_filter = 0;
 int steering, throttle, stop_requested, time_counter = 5;
 
@@ -45,8 +48,7 @@ char input_string[40];         // a string to hold incoming data
 uint8_t input_string_index = 0;
 boolean input_string_complete = false;  // whether the string is complete
 
-void setup()
-{
+void setup(){
   Wire.begin();
   Imu.Setup();
   Car.Setup();
@@ -54,49 +56,49 @@ void setup()
   pinMode(A1, INPUT);
   Serial.begin(115200);
   sei();
-  for (int i = 0; i < SONAR_NUM; i++)
-  {
+  for (int i = 0; i < SONAR_NUM; i++){
     filtered_distance[i] = 0;
     raw_distance[i] = 0;
-    for (int j = 0; j < PRECISE; j++)
-      filtering_distance[i][j] = 0;
+    for (int j = 0; j < FILTER_ARRAY_SIZE; j++)
+      unfiltered_ultrasonic_data[i][j] = 0;
   }
 }
 unsigned long temp = 0, now  = 0;
 
-void loop()
-{
-  if (time_counter == 5)
-  {
+void loop(){
+  if (time_counter == 5){
     time_counter = 0;
     sensor_clock.requestTime();
   }
   sendAccData();
   sendImuData();
+  sendEncData();
   sendUltrasonicData1();
   temp = millis();
   sendImuData();
-
+  sendEncData();
+  sendAccData();
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData2();
   temp = millis();
   sendImuData();
-
+  sendEncData();
+  sendAccData();
   now = millis();
   ultrasonicDelay(now, temp);
   sendUltrasonicData3();
   temp = millis();
   sendImuData();
-
+  sendEncData();
+  sendAccData();
   now = millis();
   ultrasonicDelay(now, temp);
   time_counter++;
 }
 
 //handles RC msgs
-void extractData(char * msg, uint8_t msg_size)
-{
+void extractData(char * msg, uint8_t msg_size){
   int8_t state = 0, temp_steering, temp_throttle, temp_stop, checksum_size = 0, checksum;
   String raw_steering = "", raw_throttle = "", raw_stop = "", raw_checksum = "";
   char temp[15];

@@ -1,7 +1,7 @@
+#include "Arduino.h"
 #ifndef CRISTIANS_CLOCK
 #define CRISTIANS_CLOCK
 
-#include "Arduino.h"
 #include <inttypes.h>
 
 class Clock
