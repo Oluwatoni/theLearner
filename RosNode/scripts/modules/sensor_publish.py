@@ -126,8 +126,8 @@ class ArduinoMonitor (Thread):
                 pass
     
     def publish_accelerometer(self):
-        self._acc_msg.accel.accel.linear.x = float(self._sensorReadings[1])
-        self._acc_msg.accel.accel.linear.y = float(self._sensorReadings[2])
+        self._acc_msg.accel.accel.linear.x = (float(self._sensorReadings[1]) - 577) * 0.0817 
+        self._acc_msg.accel.accel.linear.y = (float(self._sensorReadings[2]) - 560) * 0.0853 
         self._acc_msg.header.stamp.secs = int(self._sensorReadings[3])
         self._acc_msg.header.stamp.nsecs = int(self._sensorReadings[4]) * 1000
         self._seq += 1
