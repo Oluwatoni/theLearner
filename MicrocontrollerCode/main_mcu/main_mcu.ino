@@ -99,7 +99,7 @@ void loop(){
 
 //handles RC msgs
 void extractData(char * msg, uint8_t msg_size){
-  int8_t state = 0, temp_steering, temp_throttle, temp_stop, checksum_size = 0, checksum;
+  int16_t state = 0, temp_steering, temp_throttle, temp_stop, checksum_size = 0, checksum;
   String raw_steering = "", raw_throttle = "", raw_stop = "", raw_checksum = "";
   char temp[15];
 
@@ -167,8 +167,7 @@ void extractData(char * msg, uint8_t msg_size){
 }
 
 //using Cristian's algorithm to update the arduino's time
-void recieveTime(char * msg, uint8_t msg_size)
-{
+void recieveTime(char * msg, uint8_t msg_size){
   uint8_t state = 0, checksum_size = 0, checksum;
   uint32_t int_second, int_microsecond;
   String raw_second = "", raw_microsecond = "", raw_checksum = "";
@@ -237,10 +236,8 @@ void recieveTime(char * msg, uint8_t msg_size)
 #endif
 }
 
-
 //Handle incoming commands
-ISR(USART_RX_vect)
-{
+ISR(USART_RX_vect){
   cli();
   char temp = UDR0;
   if (temp == '\n')

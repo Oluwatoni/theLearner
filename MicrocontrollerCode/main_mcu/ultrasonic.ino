@@ -19,6 +19,8 @@ void ultrasonicRead1(){
 
   temp = millis();
   raw_distance[0] = sonar[2].ping_cm();//ultrasonic sensor 6
+
+  
   now  = millis();
   if ((now - temp ) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
   {
@@ -29,7 +31,7 @@ void ultrasonicRead1(){
   Wire.requestFrom(MCU1_I2C, 1);
   while (Wire.available() == 0)  ;
   raw_distance[1] = Wire.read();
-
+  
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
   while (Wire.available() == 0);
@@ -61,8 +63,7 @@ void ultrasonicRead2(){
 
 }
 
-void ultrasonicRead3()
-{
+void ultrasonicRead3(){
   //beginning of third wave
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
@@ -115,7 +116,7 @@ void sort_array(uint8_t * first_index, uint8_t size_of_array) {
 }
 
 void filterUltrasonicData(uint8_t first_index, uint8_t last_index) {  // Sensor ping cycle complete, do something with the results.
-  for (int i = first_index; i < last_index; i++) {
+  for (int i = first_index; i <= last_index; i++) {
     unfiltered_ultrasonic_data[i][last_measurement[i]] = raw_distance[i];
     last_measurement[i]++;
     if (last_measurement[i] == FILTER_ARRAY_SIZE)

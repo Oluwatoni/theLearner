@@ -1,5 +1,6 @@
 #!/usr/bin/env python  
 import rospy
+from math import pi
 import tf
 from tf.transformations import quaternion_from_euler
 
@@ -17,41 +18,46 @@ if __name__ == '__main__':
         br.sendTransform((0.067, 0.076, 0.0),
                          quaternion_from_euler(0,0,0.8116),
                          rospy.Time.now(),
-                         "learner_ultrasonic_0_link",
+                         "ultrasonic_0_link",
                          "learner/base_link")
         br.sendTransform((0.108, 0.028, 0.0),
                          quaternion_from_euler(0,0,0.2705),
                          rospy.Time.now(),
-                         "learner_ultrasonic_1_link",
+                         "ultrasonic_1_link",
                          "learner/base_link")
         br.sendTransform((0.108, -0.028, 0.0),
                          quaternion_from_euler(0,0,-0.2705),
                          rospy.Time.now(),
-                         "learner_ultrasonic_2_link",
+                         "ultrasonic_2_link",
                          "learner/base_link")
         br.sendTransform((0.067, -0.076, 0.0),
                          quaternion_from_euler(0,0,-0.8116),
                          rospy.Time.now(),
-                         "learner_ultrasonic_3_link",
+                         "ultrasonic_3_link",
                          "learner/base_link")
         br.sendTransform((-0.01, -0.052, 0.0),
                          quaternion_from_euler(0,0,-1.571),
                          rospy.Time.now(),
-                         "learner_ultrasonic_4_link",
+                         "ultrasonic_4_link",
                          "learner/base_link")
         br.sendTransform((-0.04, 0.0, 0.0),
-                         quaternion_from_euler(0,0,3.142),
+                         quaternion_from_euler(0,0,pi),
                          rospy.Time.now(),
-                         "learner_ultrasonic_5_link",
+                         "ultrasonic_5_link",
                          "learner/base_link")
         br.sendTransform((-0.01, .052, 0.0),
                          quaternion_from_euler(0,0,1.571),
                          rospy.Time.now(),
-                         "learner_ultrasonic_6_link",
+                         "ultrasonic_6_link",
                          "learner/base_link")
         br.sendTransform((0.04, 0.0, 0.152),
-                         quaternion_from_euler(0,0,(3.142/2)),
+                         quaternion_from_euler(0,0,(pi/2)),
                          rospy.Time.now(),
-                         "learner_imu_link",
+                         "imu_link",
+                         "learner/base_link")
+        br.sendTransform((0.04, 0.0, 0.152),
+                         quaternion_from_euler((-pi/2),0,0),
+                         rospy.Time.now(),
+                         "acc_link",
                          "learner/base_link")
         rate.sleep()

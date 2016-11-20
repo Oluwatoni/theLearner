@@ -15,21 +15,21 @@ class PS3Controller:
         self._stop = 11
         self._auto = False
         self._disable = False
-        self._command_publisher = rospy.Publisher('arduino_sensors/command', Int32,queue_size = 1)
-        # initialize ROS joystick suscriber and steering and throttle publisher
+        self._run_suspend_button_state = 0
+        self._stop_button_state = 0
+        self._command_publisher = rospy.Publisher('learner/command', Int32,queue_size = 1)
         self._joy = rospy.Subscriber('joy', Joy, self.joy_callback)
         
     def joy_callback(self, joy):
         "invoked every time a joystick message arrives" 
-        
-        #TODO debounce the button presses
-        if joy.buttons[self._run_suspend]:
+        if joy.buttons[self._run_suspend] and not(self._run_suspend_button_state):
             self._auto = not(self._auto)
             if self._auto:
                 rospy.logwarn('autonomous mode enabled')
             else:
                 rospy.logwarn('teleop mode enabled')
-        if joy.buttons[self._stop]:
+
+        if joy.buttons[self._stop] and not(self._stop_button_state):
             self._disable = not(self._disable)
             if self._disable:
                 rospy.logwarn('\nVEHICLE STOPPED\n')
@@ -42,19 +42,13 @@ class PS3Controller:
                 self._command = 1
             else:
                 self._command = 0
-            self._command += int(-30 * joy.axes[self._steer]) << 1
+            self._command += int(30 * (-joy.axes[self._steer] +1)) << 1
             self._command += int(255 *( -joy.axes[self._drive] + joy.axes[self._reverse])) << 8;
             #print "0x%x" % int(self._command)
             self._command_publisher.publish(self._command)
-        ''''
-        freq = 20.0
-        #reduce the controller frequency to 10Hz and write to the arduino
-        if time.clock() - self._old_time >= (1.0/freq):
-            _arduino_serial_port.write(self._msg)
-            #_arduino_serial_port.flush()
-            self._old_time = time.clock()
-            #print self._msg
-        self._old_msg = self._msg
-        self._msg = "r,"    #reset message
-        '''''
-
+        elif self._disable: 
+            self._command = 0
+            self._command += int(30) << 1
+            self._command_publisher.publish(self._command)
+        self._run_suspend_button_state = joy.buttons[self._run_suspend]
+        self._stop_button_state = joy.buttons[self._stop]

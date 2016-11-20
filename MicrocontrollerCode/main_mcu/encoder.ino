@@ -13,8 +13,8 @@ float readEncoderData(){
     c[i] = Wire.read();    // receive a byte as character
     i++;
   }
-  dt = ((uint16_t) c[3] + (c[2] << 8))/10000.0;//in s
-  speed = ((c[0]/20)*WHEEL_CIRCUM)/dt;
+  dt = ((uint16_t) c[3] + (c[2] << 8))/10000000.0;//in s
+  speed = ((c[0]/20.0)*WHEEL_CIRCUM)/dt;
   return speed;
 }
 

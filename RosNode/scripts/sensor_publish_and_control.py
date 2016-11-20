@@ -25,6 +25,7 @@ def main():
     except rospy.ROSInterruptException: pass
     rospy.loginfo('joystick vehicle controller finished')
     learnerRead.stop()
+    learnerRead.join()
 
 if __name__ == '__main__':
     main()

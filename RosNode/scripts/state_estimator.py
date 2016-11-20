@@ -12,9 +12,9 @@ from std_msgs.msg import Int16, Float32, Time
 from tf.transformations import quaternion_from_euler
 
 def main():
-    rospy.init_node('learner_state_estimator', anonymous = True)
+    rospy.init_node('state_estimator', anonymous = True)
     state_publisher = rospy.Publisher('learner/odom',Odometry,queue_size = 1)
-    rospy.Subscriber("arduino_sensors/imu", Imu, EKF_implementation)
+    rospy.Subscriber("sensors/imu", Imu, EKF_implementation)
     br = tf.TransformBroadcaster()
     learner_state = Odometry()
     learner_pose = learner_state.pose.pose

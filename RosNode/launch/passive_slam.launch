@@ -1,7 +1,7 @@
 <launch>
-<node pkg="the_learner" name="connect_controller" type="connect_controller.sh" output="screen" />
-<node pkg="joy" name="joy_node" type="joy_node"/>
-<node pkg="the_learner" name="sensor_publish_and_control" type="sensor_publish_and_control.py" args="/dev/rfcomm0" output="screen" />
-<node pkg="the_learner" name="tf_broadcaster" type="tf_broadcaster.py"/>
-<node pkg="the_learner" name="pose_estimator" type="state_estimator.py"/>
+    <node pkg="the_learner" name="connect_controller" type="connect_controller.sh" output="screen" />
+    <node pkg="joy" name="joy_node" type="joy_node"/>
+    <node pkg="the_learner" name="sensor_publish_and_control" type="sensor_publish_and_control.py" args="/dev/rfcomm0" output="screen" />
+    <node pkg="the_learner" name="tf_broadcaster" type="tf_broadcaster.py"/>
+    <node pkg="the_learner" name="pose_estimator" type="state_estimator.py"/>
 </launch>
