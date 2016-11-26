@@ -1,0 +1,2 @@
+The encoder odom script publishes the odometry data provided by the encoder onboard the robot. It suscribes to the raw speed from the encoder, the current steering and throttle command and the vehilcles pose estimate (provided by the state estimator).
+ This script updates the odometry using the current speed, the last command, and the most recent state estimate. The last steering command is used to update the angular velocity estimate while the last throttle command is used to update the direction of the speed.

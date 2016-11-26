@@ -32,7 +32,6 @@ class ArduinoMonitor (Thread):
         self._ultrasonicData = zeros(7)
         self._imu_msg = Imu()
         self._acc_msg = AccelWithCovarianceStamped()
-        #TODO publish an odom message instead?
         self._enc_msg = RawSpeedEncoder()#vehicle speed
         self._batteryLevels = zeros(20)
         self._batteryLevel = 0

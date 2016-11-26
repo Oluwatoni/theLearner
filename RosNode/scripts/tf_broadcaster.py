@@ -55,7 +55,7 @@ if __name__ == '__main__':
                          rospy.Time.now(),
                          "imu_link",
                          "learner/base_link")
-        br.sendTransform((0.04, 0.0, 0.152),
+        br.sendTransform((0.04, 0.0, 0.072),
                          quaternion_from_euler((-pi/2),0,0),
                          rospy.Time.now(),
                          "acc_link",
