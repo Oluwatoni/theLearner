@@ -1,10 +1,10 @@
-from threading import Thread
 import serial
 import signal
 import time
 import threading
 import rospy
 import numpy as np
+import tf
 from tf.transformations import quaternion_from_euler
 from numpy import zeros
 from sensor_msgs.msg import Imu
@@ -12,6 +12,8 @@ from sensor_msgs.msg import Range
 from std_msgs.msg import Int16, Int32, Float32, Time
 from geometry_msgs.msg import AccelWithCovarianceStamped
 from the_learner.msg import RawSpeedEncoder
+from math import pi
+from threading import Thread
 
 #thread that handles incoming messages from the arduino
 class ArduinoMonitor (Thread):
@@ -24,6 +26,7 @@ class ArduinoMonitor (Thread):
         self._serial_port.xonxoff = 0
         self._serial_port.rtscts = 0
         self._threadID = threadID
+        self._br = tf.TransformBroadcaster()
         self._imu_accel_factor = 9.806 / 256.0
         self._seq = 0
         self._running = 1
@@ -132,9 +135,15 @@ class ArduinoMonitor (Thread):
         self._seq += 1
         self._acc_msg.header.seq = self._seq
         self._acc_pub.publish(self._acc_msg)
+        self._br.sendTransform((0.04, 0.0, 0.072),
+                         quaternion_from_euler((-pi/2),0,0),
+                         rospy.Time.now(),
+                         "acc_link",
+                         "learner/base_link")
+
 
     def publish_encoder(self):
-        self._enc_msg.speed = float(self._sensorReadings[1])/1000
+        self._enc_msg.speed = float(self._sensorReadings[1])
         self._enc_msg.header.stamp.secs = int(self._sensorReadings[2])
         self._enc_msg.header.stamp.nsecs = int(self._sensorReadings[3]) * 1000 
         self._seq += 1
@@ -165,7 +174,12 @@ class ArduinoMonitor (Thread):
         self._batteryLevels[19] = int(self._sensorReadings[10])
         if self._batteryLevels[0] != 0:
             self._battery_pub.publish(np.median(self._batteryLevels))
-      
+        self._br.sendTransform((0.04, 0.0, 0.152),
+                          quaternion_from_euler(0,0,(pi/2)),
+                          rospy.Time.now(),
+                          "imu_link",
+                          "learner/base_link")
+
     #publishes ultrasonic data in the order supplied
     def publish_ultrasonic(self, order, time):
         for i in range(len(order)):
@@ -232,6 +246,3 @@ def generate_checksum(data, check_if_number):
             sumOfBytes += ord(char)
         sumOfBytes += ord(",")
     return (sumOfBytes % 255)
-
-
-

@@ -10,11 +10,6 @@ if __name__ == '__main__':
     rate = rospy.Rate(40.0)
     
     while not rospy.is_shutdown():
-        br.sendTransform((0.0, 0.0, 0.0),
-                         quaternion_from_euler(0,0,0),
-                         rospy.Time.now(),
-                         "learner/base_link",
-                         "learner/odom")
         br.sendTransform((0.067, 0.076, 0.0),
                          quaternion_from_euler(0,0,0.8116),
                          rospy.Time.now(),
@@ -49,15 +44,5 @@ if __name__ == '__main__':
                          quaternion_from_euler(0,0,1.571),
                          rospy.Time.now(),
                          "ultrasonic_6_link",
-                         "learner/base_link")
-        br.sendTransform((0.04, 0.0, 0.152),
-                         quaternion_from_euler(0,0,(pi/2)),
-                         rospy.Time.now(),
-                         "imu_link",
-                         "learner/base_link")
-        br.sendTransform((0.04, 0.0, 0.072),
-                         quaternion_from_euler((-pi/2),0,0),
-                         rospy.Time.now(),
-                         "acc_link",
                          "learner/base_link")
         rate.sleep()

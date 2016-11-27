@@ -68,7 +68,7 @@ unsigned long temp = 0, now  = 0;
 void loop(){
   if (time_counter == 5){
     time_counter = 0;
-    sensor_clock.requestTime();
+    //sensor_clock.requestTime();
   }
   sendAccData();
   sendImuData();

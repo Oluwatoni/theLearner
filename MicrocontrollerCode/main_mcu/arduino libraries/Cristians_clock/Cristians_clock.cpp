@@ -1,14 +1,12 @@
 #include "Cristians_clock.h"
-Clock:: Clock()
-{
+Clock:: Clock(){
   second = 0;
   microsecond = 0;
   last_update = micros();
 }
 
 //request time to set up the internal clock
-void Clock:: requestTime()
-{
+void Clock:: requestTime(){
   String msg;
   msg.concat("t,now,");
   msg = appendChecksum(msg);
@@ -16,8 +14,7 @@ void Clock:: requestTime()
   request_sent = micros();
 }
 
-void Clock:: setTime( uint32_t init_second, uint32_t init_microsecond)
-{
+void Clock:: setTime( uint32_t init_second, uint32_t init_microsecond){
   second = init_second;
   microsecond = init_microsecond;
   last_update = micros();
@@ -27,21 +24,18 @@ void Clock:: setTime( uint32_t init_second, uint32_t init_microsecond)
 #endif
 }
 
-void Clock:: updateTime()
-{
+void Clock:: updateTime(){
   long current_update = micros() - last_update;
-  second += current_update /1000000;
-  microsecond += current_update % 1000000;
-  if (microsecond > 1000000)
-  {
+  microsecond += current_update;
+  
+  if (microsecond >= 1000000){
     microsecond %= 1000000;
-    second += microsecond/1000000;
+    second++;
   } 
   last_update = micros();
 }
 
-String Clock:: appendTime(String msg)
-{
+String Clock:: appendTime(String msg){
   msg.concat(second);
   msg.concat(",");
   msg.concat(microsecond);
@@ -49,16 +43,14 @@ String Clock:: appendTime(String msg)
   return msg;
 }
 
-String appendChecksum(String msg)
-{
+String appendChecksum(String msg){
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
   msg.concat(generateChecksum(buffer, msg.length()));
   return msg;
 }
 
-uint8_t generateChecksum(char data[], char sizeOfData)
-{
+uint8_t generateChecksum(char data[], char sizeOfData){
   uint32_t sum = 0;
   while (sizeOfData)
     sum += (uint8_t)data[--sizeOfData];

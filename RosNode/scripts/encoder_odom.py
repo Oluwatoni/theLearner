@@ -35,16 +35,17 @@ class OdomThread(Thread):
         self._speed = 0
         self._steering = 0
         self._throttle = 0
-        self._dbw = 0.01 #distance between wheels   
+        self._dbw = 0.114 #distance between wheels   
         self._command_mutex = Semaphore()    
         self._last_t = rospy.Time.now()    
+        self._dt = 0
 
         self._odom.header.frame_id = "learner/odom"
         self._odom.header.stamp = rospy.Time.now()
         self._odom.header.seq = 0
         self._odom.child_frame_id = "learner/base_link"
 
-        self._odom.pose.pose.position.x = 1
+        self._odom.pose.pose.position.x = 0
         self._odom.pose.pose.position.y = 0
         self._odom.pose.pose.position.z = 0
         self._odom.pose.pose.orientation.x = 0
@@ -67,21 +68,19 @@ class OdomThread(Thread):
             if self._speed_available:
                 self._speed_available = False
                 (roll,pitch,yaw) = euler_from_quaternion([float(self._odom.pose.pose.orientation.x), float(self._odom.pose.pose.orientation.y), float(self._odom.pose.pose.orientation.z), float(self._odom.pose.pose.orientation.w)])
-
-                dt = (rospy.Time.now() - self._last_t).to_sec()
                 
                 self._command_mutex.acquire()
-                omega = (self._speed * tan(radians(self._steering))) / self._dbw
+                omega = (self._speed * tan(self._steering)) / self._dbw
                 vx = self._speed * cos(yaw) 
                 vy = self._speed * sin(yaw) 
                 self._command_mutex.release()
 
                 self._odom.header.stamp = rospy.Time.now()
                 
-                self._odom.pose.pose.position.x += (vx * dt)
-                self._odom.pose.pose.position.y += (vy *dt)
+                self._odom.pose.pose.position.x += (vx * self._dt)
+                self._odom.pose.pose.position.y += (vy * self._dt)
 #                print self._steering
-                yaw = yaw + omega * dt
+                yaw = yaw + omega * self._dt
                 (x,y,z,w) = quaternion_from_euler(roll, pitch, yaw)
                 self._odom.pose.pose.orientation.x = x
                 self._odom.pose.pose.orientation.y = y
@@ -90,25 +89,27 @@ class OdomThread(Thread):
                 self._odom.twist.twist.linear.x = vx
                 self._odom.twist.twist.linear.y = vy
                 self._odom.twist.twist.angular.z = omega
-                self._br.sendTransform((x, y, z),
-                                 quaternion_from_euler(0,0,0),
+                self._br.sendTransform((self._odom.pose.pose.position.x, self._odom.pose.pose.position.x, 0),
+                                 (x,y,z,w),
                                  rospy.Time.now(),
                                  "learner/base_link",
                                  "learner/odom")
 #                if not(rospy.is_shutdown):
                 self._odom_publisher.publish(self._odom)
-                last_t = rospy.Time.now()    
 
     def close(self):
         self._run = False        
 
-    def updateOdom(self,data):
-        self._speed = data.speed / 1000
+    def updateOdom(self, data):
+        self._dt = (rospy.Time.now() - self._last_t).to_sec()
+        self._speed = ((data.speed / 40.0) * 0.187) / self._dt
+        print self._speed
+        self._last_t = rospy.Time.now()    
         self._speed_available = True
 
-    def updateCommand(self,data):
+    def updateCommand(self, data):
         self._command_mutex.acquire()
-        self._steering = int((data.data >> 1) & 127) - 30
+        self._steering = radians((int((data.data >> 1) & 127) - 30) * 0.892)
         self._throttle = int(data.data >> 8)
         self._command_mutex.release()
 

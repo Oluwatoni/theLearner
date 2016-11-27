@@ -36,7 +36,7 @@ def main():
                          quaternion_from_euler(0,0,0),
                          rospy.Time.now(),
                          "learner/odom",
-                         "/map")
+                         "map")
         rate.sleep()   
 
 def EKF_implementation(self):
