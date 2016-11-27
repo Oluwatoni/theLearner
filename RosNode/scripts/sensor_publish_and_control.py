@@ -5,7 +5,6 @@ import time
 from modules.sensor_publish import ArduinoMonitor
 from modules.PS3_control import PS3Controller
 
-time.sleep(5)
 #read in serial port
 try:
     serial_port = sys.argv[1]
