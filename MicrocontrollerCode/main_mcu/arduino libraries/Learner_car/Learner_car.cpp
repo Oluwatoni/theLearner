@@ -69,11 +69,14 @@ void Learner_car::SoftStop()
 
 void Learner_car::Instruct(int dir, int power)//direction (-100 to 100) power 0 to 100
 {
-  if (power > 0)
-    Forward(map(power, 0, 255, 90, 255));
-  else if (power == 0)
-    Forward(0);
+  if (abs(power) > 80)
+    if (power > 0)
+      Forward(power);
+    else
+      Reverse(abs(power));
   else
-    Reverse(map(abs(power), 0, 255, 90, 255));
+    Forward(0);
+
+    
   steering.write(map(dir, -30, 30, 85, 65));
 }

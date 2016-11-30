@@ -1,4 +1,4 @@
-#include "learner_car.h"
+#include "Learner_car.h"
 #include <Servo.h>
 
 Learner_car::Learner_car()
@@ -69,11 +69,14 @@ void Learner_car::SoftStop()
 
 void Learner_car::Instruct(int dir, int power)//direction (-100 to 100) power 0 to 100
 {
-  if (power > 0)
-    Forward(map(power, 0, 100, 90, 255));
-  else if (power == 0)
-    Forward(0);
+  if (abs(power) > 30)
+    if (power > 0)
+      Forward(power);
+    else
+      Reverse(abs(power));
   else
-    Reverse(map(abs(power), 0, 100, 90, 255));
-  steering.write(map(dir, -100, 100, 85, 65));
+    Forward(0);
+
+    
+  steering.write(map(dir, -30, 30, 85, 65));
 }

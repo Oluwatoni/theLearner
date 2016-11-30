@@ -70,7 +70,9 @@ class OdomThread(Thread):
                 (roll,pitch,yaw) = euler_from_quaternion([float(self._odom.pose.pose.orientation.x), float(self._odom.pose.pose.orientation.y), float(self._odom.pose.pose.orientation.z), float(self._odom.pose.pose.orientation.w)])
                 
                 self._command_mutex.acquire()
-                omega = (self._speed * tan(self._steering)) / self._dbw
+                omega = (self._speed * tan(-self._steering)) / self._dbw
+                if self._throttle < 0:
+                    self._speed *= -1
                 vx = self._speed * cos(yaw) 
                 vy = self._speed * sin(yaw) 
                 self._command_mutex.release()
@@ -79,7 +81,7 @@ class OdomThread(Thread):
                 
                 self._odom.pose.pose.position.x += (vx * self._dt)
                 self._odom.pose.pose.position.y += (vy * self._dt)
-#                print self._steering
+#                print self._throttle
                 yaw = yaw + omega * self._dt
                 (x,y,z,w) = quaternion_from_euler(roll, pitch, yaw)
                 self._odom.pose.pose.orientation.x = x
@@ -89,7 +91,7 @@ class OdomThread(Thread):
                 self._odom.twist.twist.linear.x = vx
                 self._odom.twist.twist.linear.y = vy
                 self._odom.twist.twist.angular.z = omega
-                self._br.sendTransform((self._odom.pose.pose.position.x, self._odom.pose.pose.position.x, 0),
+                self._br.sendTransform((self._odom.pose.pose.position.x, self._odom.pose.pose.position.y, 0),
                                  (x,y,z,w),
                                  rospy.Time.now(),
                                  "learner/base_link",
@@ -103,14 +105,14 @@ class OdomThread(Thread):
     def updateOdom(self, data):
         self._dt = (rospy.Time.now() - self._last_t).to_sec()
         self._speed = ((data.speed / 40.0) * 0.187) / self._dt
-        print self._speed
+        #print self._speed
         self._last_t = rospy.Time.now()    
         self._speed_available = True
 
     def updateCommand(self, data):
         self._command_mutex.acquire()
         self._steering = radians((int((data.data >> 1) & 127) - 30) * 0.892)
-        self._throttle = int(data.data >> 8)
+        self._throttle = int(data.data >> 10)
         self._command_mutex.release()
 
 if __name__ == '__main__':

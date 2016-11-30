@@ -237,7 +237,7 @@ void recieveTime(char * msg, uint8_t msg_size){
 }
 
 //Handle incoming commands
-/*
+
 ISR(USART_RX_vect){
   cli();
   char temp = UDR0;
@@ -259,4 +259,4 @@ ISR(USART_RX_vect){
     input_string_index++;
   }
   sei();
-}*/
+}

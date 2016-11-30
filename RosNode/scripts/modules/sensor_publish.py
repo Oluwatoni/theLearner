@@ -207,7 +207,7 @@ class ArduinoMonitor (Thread):
             msg += str(int((data.data >> 1) & 127) - 30)
             msg += ","
             # set throttle
-            msg += str(int(data.data >> 8))
+            msg += str(int(data.data >> 10))
             msg += ","
             #set brake
             msg += str(data.data & 1)
