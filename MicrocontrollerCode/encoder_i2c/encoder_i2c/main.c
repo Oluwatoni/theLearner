@@ -6,6 +6,7 @@
  */
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/cpufunc.h>
 #include "usiTwiSlave.h"
 
 #define SLAVE_ADDRESS 0x07
@@ -40,7 +41,7 @@ int main(void){
 
 //	set pin as an input pin
 	PORTB |= (0 << PB4);
-	DDRB |= (0 << DDB4);
+	DDRB &= ~(1 << DDB4);
 	
 	//set up timer
 	TCCR1 |= (1 << 2);
@@ -58,7 +59,6 @@ int main(void){
 					deactivate_PB4_interrupt();
 					deactivate_timer_interrupt();
 					usiTwiTransmitByte(pulses.pulse_count);
-					usiTwiTransmitByte(pulses.pulse_count);
 					usiTwiTransmitByte(pulses.dt >> 8);
 					usiTwiTransmitByte(pulses.dt & 0xFF);
 					pulses.pulse_count = 0;
@@ -72,8 +72,13 @@ int main(void){
 }
 
 ISR(PCINT0_vect){
+	uint8_t pin_value = PINB & (1 << PB4);
 	cli();
-	pulses.pulse_count++;
+	//to debounce the encoder
+	for (int i = 0; i < 20000; i++)
+		_NOP();
+	if (pin_value == (PINB & (1 << PB4)))
+		pulses.pulse_count++;
 	sei();
 }
 

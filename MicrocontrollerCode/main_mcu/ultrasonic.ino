@@ -19,11 +19,9 @@ void ultrasonicRead1(){
 
   temp = millis();
   raw_distance[0] = sonar[2].ping_cm();//ultrasonic sensor 6
-
   
   now  = millis();
-  if ((now - temp ) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
-  {
+  if ((now - temp ) < ULTRASONIC_DELAY && (int)(now - temp) > 0){
     delay((temp + ULTRASONIC_DELAY) - now); //make sure 15ms has elapsed before retrieving range data //TODO make define
   }
 
