@@ -1,8 +1,7 @@
 #include "IMU.h"
 #include <Wire.h>
 
-IMU::IMU(float frequency) 
-{
+IMU::IMU(float frequency){
   update_frequency = frequency;
   //default values
   accel_min[0] = ((float) -280);
@@ -21,8 +20,7 @@ IMU::IMU(float frequency)
   accel_scale[1] = (GRAVITY / (accel_max[1] - accel_offset[1]));
   accel_scale[2] = (GRAVITY / (accel_max[2] - accel_offset[2]));
 }
-void IMU::Setup()
-{
+void IMU::Setup(){
   // Init sensors
   delay(50);  // Give sensors enough time to start
   I2C_Init();
@@ -34,10 +32,8 @@ void IMU::Setup()
   reset_sensor_fusion();
 }
 
-void IMU::UpdateIMU() 
-{
-	if((millis() - timestamp) >= (int)(1000.0 / update_frequency))
-	  {
+void IMU::UpdateIMU(){
+	if((millis() - timestamp) >= (int)(1000.0 / update_frequency)){
 		timestamp_old = timestamp;
 		timestamp = millis();
 		if (timestamp > timestamp_old)
@@ -46,34 +42,33 @@ void IMU::UpdateIMU()
 
 		// Update sensor readings
 		read_sensors();
-
 		// Apply sensor calibration
 		compensate_sensor_errors();
 		// Run DCM algorithm
+
 	    Compass_Heading(); // Calculate magnetic heading
 		Matrix_update();
 		Normalize();
 		Drift_correction();
 		Euler_angles();
+
 #if DEBUG__PRINT_LOOP_TIME == true
 		Serial.print("loop time (ms) = ");
 		Serial.println(millis() - timestamp);
 #endif
 	  }
 #if DEBUG__PRINT_LOOP_TIME == true
-	  else
-	  {
+	  else{
 		Serial.println("waiting...");
 	  }
 #endif
 }
 
-void IMU::I2C_Init()
-{
+void IMU::I2C_Init(){
   Wire.begin();
 }
-void IMU::Accel_Init()
-{
+
+void IMU::Accel_Init(){
   Wire.beginTransmission(ACCEL_ADDRESS);
   WIRE_SEND(0x2D);  // Power register
   WIRE_SEND(0x08);  // Measurement mode
@@ -94,8 +89,7 @@ void IMU::Accel_Init()
 }
 
 // Reads x, y and z accelerometer registers
-void IMU::Read_Accel()
-{
+void IMU::Read_Accel(){
   int i = 0;
   byte buff[6];
   
@@ -120,15 +114,13 @@ void IMU::Read_Accel()
     accel[1] = (int16_t)((((uint16_t) buff[1]) << 8) | buff[0]);  // Y axis (internal sensor x axis)
     accel[2] = (int16_t)((((uint16_t) buff[5]) << 8) | buff[4]);  // Z axis (internal sensor z axis)
   }
-  else
-  {
+  else{
     num_accel_errors++;
     if (output_errors) Serial.println("!ERR: reading accelerometer");
   }
 }
 
-void IMU::Magn_Init()
-{
+void IMU::Magn_Init(){
   Wire.beginTransmission(MAGN_ADDRESS);
   WIRE_SEND(0x02); 
   WIRE_SEND(0x00);  // Set continuous mode (default 10Hz)
@@ -137,13 +129,12 @@ void IMU::Magn_Init()
 
   Wire.beginTransmission(MAGN_ADDRESS);
   WIRE_SEND(0x00);
-  WIRE_SEND(0b00011000);  // Set 50Hz
+  WIRE_SEND(0b00011000);  // Set 75Hz
   Wire.endTransmission();
   delay(5);
 }
 
-void IMU::Read_Magn()
-{
+void IMU::Read_Magn(){
   int i = 0;
   byte buff[6];
  
@@ -174,8 +165,7 @@ void IMU::Read_Magn()
   }
 }
 
-void IMU::Gyro_Init()
-{
+void IMU::Gyro_Init(){
   // Power up reset defaults
   Wire.beginTransmission(GYRO_ADDRESS);
   WIRE_SEND(0x3E);
@@ -207,8 +197,7 @@ void IMU::Gyro_Init()
 }
 
 // Reads x, y and z gyroscope registers
-void IMU::Read_Gyro()
-{
+void IMU::Read_Gyro(){
   int i = 0;
   byte buff[6];
   
@@ -237,8 +226,7 @@ void IMU::Read_Gyro()
     if (output_errors) Serial.println("!ERR: reading gyroscope");
   }
 }
-void IMU::Compass_Heading()
-{
+void IMU::Compass_Heading(){
   float mag_x;
   float mag_y;
   float cos_roll;
@@ -259,8 +247,7 @@ void IMU::Compass_Heading()
   MAG_Heading = atan2(-mag_y, mag_x);
 }
 
-void IMU::Normalize(void)
-{
+void IMU::Normalize(void){
   float error=0;
   float temporary[3][3];
   float renorm=0;
@@ -286,8 +273,7 @@ void IMU::Normalize(void)
 }
 
 /**************************************************/
-void IMU::Drift_correction(void)
-{
+void IMU::Drift_correction(void){
   float mag_heading_x;
   float mag_heading_y;
   float errorCourse;
@@ -328,8 +314,7 @@ void IMU::Drift_correction(void)
   Vector_Add(Omega_I,Omega_I,Scaled_Omega_I);//adding integrator to the Omega_I
 }
 
-void IMU::Matrix_update(void)
-{
+void IMU::Matrix_update(void){
   Gyro_Vector[0]=GYRO_SCALED_RAD(gyro[0]); //gyro x roll
   Gyro_Vector[1]=GYRO_SCALED_RAD(gyro[1]); //gyro y pitch
   Gyro_Vector[2]=GYRO_SCALED_RAD(gyro[2]); //gyro z yaw
@@ -341,17 +326,6 @@ void IMU::Matrix_update(void)
   Vector_Add(&Omega[0], &Gyro_Vector[0], &Omega_I[0]);  //adding proportional term
   Vector_Add(&Omega_Vector[0], &Omega[0], &Omega_P[0]); //adding Integrator term
   
-#if DEBUG__NO_DRIFT_CORRECTION == true // Do not use drift correction
-  Update_Matrix[0][0]=0;
-  Update_Matrix[0][1]=-G_Dt*Gyro_Vector[2];//-z
-  Update_Matrix[0][2]=G_Dt*Gyro_Vector[1];//y
-  Update_Matrix[1][0]=G_Dt*Gyro_Vector[2];//z
-  Update_Matrix[1][1]=0;
-  Update_Matrix[1][2]=-G_Dt*Gyro_Vector[0];
-  Update_Matrix[2][0]=-G_Dt*Gyro_Vector[1];
-  Update_Matrix[2][1]=G_Dt*Gyro_Vector[0];
-  Update_Matrix[2][2]=0;
-#else // Use drift correction
   Update_Matrix[0][0]=0;
   Update_Matrix[0][1]=-G_Dt*Omega_Vector[2];//-z
   Update_Matrix[0][2]=G_Dt*Omega_Vector[1];//y
@@ -361,32 +335,27 @@ void IMU::Matrix_update(void)
   Update_Matrix[2][0]=-G_Dt*Omega_Vector[1];//-y
   Update_Matrix[2][1]=G_Dt*Omega_Vector[0];//x
   Update_Matrix[2][2]=0;
-#endif
 
   Matrix_Multiply(DCM_Matrix,Update_Matrix,Temporary_Matrix); //a*b=c
 
   for(int x=0; x<3; x++) //Matrix Addition (update)
   {
-    for(int y=0; y<3; y++)
-    {
+    for(int y=0; y<3; y++){
       DCM_Matrix[x][y]+=Temporary_Matrix[x][y];
     }
   }
 }
 
-void IMU::Euler_angles(void)
-{
+void IMU::Euler_angles(void){
   pitch = -asin(DCM_Matrix[2][0]);
   roll = atan2(DCM_Matrix[2][1],DCM_Matrix[2][2]);
   yaw = atan2(DCM_Matrix[1][0],DCM_Matrix[0][0]);
 }
 
-float IMU::Vector_Dot_Product(const float v1[3], const float v2[3])
-{
+float IMU::Vector_Dot_Product(const float v1[3], const float v2[3]){
   float result = 0;
   
-  for(int c = 0; c < 3; c++)
-  {
+  for(int c = 0; c < 3; c++){
     result += v1[c] * v2[c];
   }
   
@@ -395,35 +364,29 @@ float IMU::Vector_Dot_Product(const float v1[3], const float v2[3])
 
 // Computes the cross product of two vectors
 // out has to different from v1 and v2 (no in-place)!
-void IMU::Vector_Cross_Product(float out[3], const float v1[3], const float v2[3])
-{
+void IMU::Vector_Cross_Product(float out[3], const float v1[3], const float v2[3]){
   out[0] = (v1[1] * v2[2]) - (v1[2] * v2[1]);
   out[1] = (v1[2] * v2[0]) - (v1[0] * v2[2]);
   out[2] = (v1[0] * v2[1]) - (v1[1] * v2[0]);
 }
 
 // Multiply the vector by a scalar
-void IMU::Vector_Scale(float out[3], const float v[3], float scale)
-{
-  for(int c = 0; c < 3; c++)
-  {
+void IMU::Vector_Scale(float out[3], const float v[3], float scale){
+  for(int c = 0; c < 3; c++){
     out[c] = v[c] * scale; 
   }
 }
 
 // Adds two vectors
-void IMU::Vector_Add(float out[3], const float v1[3], const float v2[3])
-{
-  for(int c = 0; c < 3; c++)
-  {
+void IMU::Vector_Add(float out[3], const float v1[3], const float v2[3]){
+  for(int c = 0; c < 3; c++){
     out[c] = v1[c] + v2[c];
   }
 }
 
 // Multiply two 3x3 matrices: out = a * b
 // out has to different from a and b (no in-place)!
-void IMU::Matrix_Multiply(const float a[3][3], const float b[3][3], float out[3][3])
-{
+void IMU::Matrix_Multiply(const float a[3][3], const float b[3][3], float out[3][3]){
   for(int x = 0; x < 3; x++)  // rows
   {
     for(int y = 0; y < 3; y++)  // columns
@@ -435,17 +398,14 @@ void IMU::Matrix_Multiply(const float a[3][3], const float b[3][3], float out[3]
 
 // Multiply 3x3 matrix with vector: out = a * b
 // out has to different from b (no in-place)!
-void IMU::Matrix_Vector_Multiply(const float a[3][3], const float b[3], float out[3])
-{
-  for(int x = 0; x < 3; x++)
-  {
+void IMU::Matrix_Vector_Multiply(const float a[3][3], const float b[3], float out[3]){
+  for(int x = 0; x < 3; x++){
     out[x] = a[x][0] * b[0] + a[x][1] * b[1] + a[x][2] * b[2];
   }
 }
 
 // Init rotation matrix using euler angles
-void IMU::init_rotation_matrix(float m[3][3], float yaw, float pitch, float roll)
-{
+void IMU::init_rotation_matrix(float m[3][3], float yaw, float pitch, float roll){
   float c1 = cos(roll);
   float s1 = sin(roll);
   float c2 = cos(pitch);
@@ -518,75 +478,59 @@ void IMU::compensate_sensor_errors() {
       magnetom_tmp[i] = magnetom[i] - magn_ellipsoid_center[i];
     Matrix_Vector_Multiply(magn_ellipsoid_transform, magnetom_tmp, magnetom);
 
-
     // Compensate gyroscope error
     gyro[0] -= gyro_average[0];
     gyro[1] -= gyro_average[1];
     gyro[2] -= gyro_average[2];
 }
 
-float IMU::GetAccX()
-{
-	return accel[0];
+float IMU::GetAccX(){
+	return (accel[0] * 0.0383);
 }
 
-float IMU::GetAccY()
-{
-	return accel[1];
+float IMU::GetAccY(){
+	return (accel[1] * 0.0383);
 }
 
-float IMU::GetAccZ()
-{
-	return accel[2];
+float IMU::GetAccZ(){
+	return (accel[2] * 0.0383);
 }
-
-float IMU::GetGyroX()
-{
+float IMU::GetGyroX(){
 	return gyro[0];
 }
 
-float IMU::GetGyroY()
-{
+float IMU::GetGyroY(){
 	return gyro[1];
 }
 
-float IMU::GetGyroZ()
-{
+float IMU::GetGyroZ(){
 	return gyro[2];
 }
 
-float IMU::GetMagX()
-{
+float IMU::GetMagX(){
 	return magnetom[0];
 }
 
-float IMU::GetMagY()
-{
+float IMU::GetMagY(){
 	return magnetom[1];
 }
 
-float IMU::GetMagZ()
-{
+float IMU::GetMagZ(){
 	return magnetom[2];
 }
 
-float IMU::GetHeading()
-{
+float IMU::GetHeading(){
 	return MAG_Heading;
 }
 
-float IMU::GetYaw()
-{
+float IMU::GetYaw(){
 	return yaw;
 }
 
-float IMU::GetPitch()
-{
+float IMU::GetPitch(){
 	return pitch;
 }
 
-float IMU::GetRoll()
-{
+float IMU::GetRoll(){
 	return roll;
 }
-

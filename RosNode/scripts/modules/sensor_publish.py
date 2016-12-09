@@ -7,12 +7,11 @@ import numpy as np
 import tf
 from tf.transformations import quaternion_from_euler
 from numpy import zeros
-from sensor_msgs.msg import Imu
-from sensor_msgs.msg import Range
+from sensor_msgs.msg import Imu, MagneticField, Range
 from std_msgs.msg import Int16, Int32, Float32, Time
 from geometry_msgs.msg import AccelWithCovarianceStamped
 from the_learner.msg import RawSpeedEncoder
-from math import pi
+from math import pi, radians
 from threading import Thread
 
 #thread that handles incoming messages from the arduino
@@ -34,6 +33,7 @@ class ArduinoMonitor (Thread):
         self._sensorReadings = []
         self._ultrasonicData = zeros(7)
         self._imu_msg = Imu()
+        self._mag_msg = MagneticField()
         self._acc_msg = AccelWithCovarianceStamped()
         self._enc_msg = RawSpeedEncoder()#vehicle speed
         self._batteryLevels = zeros(20)
@@ -51,7 +51,7 @@ class ArduinoMonitor (Thread):
         for i in range(7):
             self._ultrasonic_pub.append(rospy.Publisher('sensors/ultrasonic_'+str(i), Range, queue_size = 1))
         self._battery_pub = rospy.Publisher('sensors/battery_level', Int16, queue_size = 1)
-        self._imu_pub = rospy.Publisher('sensors/imu', Imu, queue_size = 1)
+        self._imu_pub = rospy.Publisher('imu/data_raw', Imu, queue_size = 1)
         self._imu_msg.header.frame_id = 'imu_link'
         self._imu_msg.orientation_covariance = [ 0.0025 , 0 , 0,
                                                  0, 0.0025, 0,
@@ -62,6 +62,11 @@ class ArduinoMonitor (Thread):
         self._imu_msg.linear_acceleration_covariance = [ 0.04 , 0 , 0,
                                                          0 , 0.04, 0,
                                                          0 , 0 , 0.04 ]
+        self._mag_pub = rospy.Publisher('imu/mag', MagneticField, queue_size = 1)
+        self._mag_msg.header.frame_id = 'imu_link'
+        self._mag_msg.magnetic_field_covariance = [ 0.0025 , 0 , 0,
+                                                    0, 0.0025, 0,
+                                                    0, 0, 0.0025 ]
         self._acc_pub = rospy.Publisher('sensors/accelerometer', AccelWithCovarianceStamped,queue_size = 1)
         self._acc_msg.header.frame_id = 'acc_link'
         self._acc_msg.accel.covariance = [0.02, 0, 0, 0, 0, 0,
@@ -141,7 +146,6 @@ class ArduinoMonitor (Thread):
                          "acc_link",
                          "learner/base_link")
 
-
     def publish_encoder(self):
         self._enc_msg.speed = float(self._sensorReadings[1])
         self._enc_msg.header.stamp.secs = int(self._sensorReadings[2])
@@ -151,31 +155,38 @@ class ArduinoMonitor (Thread):
         self._enc_pub.publish(self._enc_msg)
 
     def publish_imu(self):
-        yaw =  float(self._sensorReadings[1])
+        yaw =  -1 * float(self._sensorReadings[1])
         pitch = float(self._sensorReadings[2])
         roll = float(self._sensorReadings[3])
-        self._imu_msg.linear_acceleration.x = -float(self._sensorReadings[4]) * self._imu_accel_factor
-        self._imu_msg.linear_acceleration.y = float(self._sensorReadings[5]) * self._imu_accel_factor
-        self._imu_msg.linear_acceleration.z = float(self._sensorReadings[6]) * self._imu_accel_factor
-        self._imu_msg.angular_velocity.x = float(self._sensorReadings[7])
-        self._imu_msg.angular_velocity.y = -float(self._sensorReadings[8])
-        self._imu_msg.angular_velocity.z = -float(self._sensorReadings[9])
+        self._imu_msg.linear_acceleration.x = float(self._sensorReadings[4])
+        self._imu_msg.linear_acceleration.y = float(self._sensorReadings[5])
+        self._imu_msg.linear_acceleration.z = float(self._sensorReadings[6])
+        self._imu_msg.angular_velocity.x = float(self._sensorReadings[7])# * radians(0.06957) #gyro gain
+        self._imu_msg.angular_velocity.y = float(self._sensorReadings[8])# * radians(0.06957)
+        self._imu_msg.angular_velocity.z = float(self._sensorReadings[9])# * radians(0.06957)
         q = quaternion_from_euler(roll,pitch,yaw)
         self._imu_msg.orientation.x = q[0]
         self._imu_msg.orientation.y = q[1]
         self._imu_msg.orientation.z = q[2]
         self._imu_msg.orientation.w = q[3]
+#        self._mag_msg.magnetic_field.x = (float(self._sensorReadings[7]) * 0.92) / 10000000.0
+#        self._mag_msg.magnetic_field.y = (float(self._sensorReadings[8]) * 0.92) / 10000000.0
+#        self._mag_msg.magnetic_field.z = (float(self._sensorReadings[9]) * 0.92) / 10000000.0
         self._imu_msg.header.stamp.secs = int(self._sensorReadings[11])
         self._imu_msg.header.stamp.nsecs = int(self._sensorReadings[12]) * 1000 
+#        self._mag_msg.header.stamp.secs = int(self._sensorReadings[11])
+#        self._mag_msg.header.stamp.nsecs = int(self._sensorReadings[12]) * 1000 
         self._seq += 1
         self._imu_msg.header.seq = self._seq
+#        self._mag_msg.header.seq = self._seq
         self._imu_pub.publish(self._imu_msg)
+#        self._mag_pub.publish(self._mag_msg)
         self._batteryLevels = np.roll(self._batteryLevels,-1)
         self._batteryLevels[19] = int(self._sensorReadings[10])
         if self._batteryLevels[0] != 0:
             self._battery_pub.publish(np.median(self._batteryLevels))
         self._br.sendTransform((0.04, 0.0, 0.152),
-                          quaternion_from_euler(0,0,(pi/2)),
+                          quaternion_from_euler(0,0,0),
                           rospy.Time.now(),
                           "imu_link",
                           "learner/base_link")

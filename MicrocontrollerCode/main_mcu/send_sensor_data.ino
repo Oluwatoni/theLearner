@@ -21,6 +21,12 @@ void sendImuData(){
   msg.concat(",");
   msg.concat(Imu.GetGyroZ());
   msg.concat(",");
+//  msg.concat(Imu.GetMagX());
+//  msg.concat(",");
+//  msg.concat(Imu.GetMagY());
+//  msg.concat(",");
+//  msg.concat(Imu.GetMagZ());
+//  msg.concat(",");
   msg.concat(Car.GetBatteryLevel());
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
@@ -38,7 +44,7 @@ void sendAccData(){
   sensor_clock.updateTime();
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
-  Serial.println(msg);
+  //Serial.println(msg);
 }
 
 void sendEncData(){
@@ -51,7 +57,7 @@ void sendEncData(){
   sensor_clock.updateTime();
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
-  Serial.println(msg);
+  //Serial.println(msg);
 }
 
 void sendUltrasonicData1(){
@@ -69,7 +75,7 @@ void sendUltrasonicData1(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
-  Serial.println(msg);
+  //Serial.println(msg);
 }
 
 void sendUltrasonicData2(){
@@ -85,7 +91,7 @@ void sendUltrasonicData2(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
-  Serial.println(msg);
+  //Serial.println(msg);
 }
 
 void sendUltrasonicData3(){
@@ -103,5 +109,5 @@ void sendUltrasonicData3(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
-  Serial.println(msg);
+  //Serial.println(msg);
 }
