@@ -38,9 +38,9 @@ imu_covariance = [[.0025,0,0,0];%imu measurement covariance matrix
                   [0,0,.04,0];
                   [0,0,0,.04]];
 imu_jacobian = [[0,0,1,0,0,0,0,0];
-               [0,0,0,0,0,1,0,0];
-               [0,0,0,0,0,0,1,0];
-               [0,0,0,0,0,0,0,1]];
+                [0,0,0,0,0,1,0,0];
+                [0,0,0,0,0,0,1,0];
+                [0,0,0,0,0,0,0,1]];
 imu_measurements = zeros(4,1);%yaw, rotational velocity,
                               %x_linear_acceleration, y_linear_acceleration
 K_imu = zeros(8,1);
