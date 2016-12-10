@@ -58,9 +58,9 @@ class EKFThread(Thread):
         self._odom.twist.twist.angular.y = 0
         self._odom.twist.twist.angular.z = 0
 
-        self._odom_publisher = rospy.Publisher('learner/odom',PoseWithCovarianceStamped,queue_size = 1)
+        self._odom_publisher = rospy.Publisher('learner/odom', Odometry,queue_size = 1)
         rospy.Subscriber("sensors/accelerometer", AccelWithCovarianceStamped, self.updateAccelerometer)
-        rospy.Subscriber("sensors/imu", Imu, self.updateImu)
+        rospy.Subscriber("ardrone/imu", Imu, self.updateImu)
         rospy.Subscriber("learner/raw_odom", Odometry, self.updateEncoderOdom)
         self._update_step_ready.acquire()
         
@@ -98,42 +98,65 @@ class EKFThread(Thread):
 
     def run(self):
         while self._run:
-#            self._update_step_ready.acquire()
-            #prediction step
-            self._current_t = rospy.Time.now()
-            dt = (self._current_t - self._last_t).to_sec()
-            self._last_t = self._current_t
-            state_transition = np.matrix([[1,0,0,dt,0,0,(dt**2)/2.0,0],#same as the state jacobian
-                                          [0,1,0,0,dt,0,0,(dt**2)/2.0],
-                                          [0,0,1,0,0,dt,0,0],
-                                          [0,0,0,1,0,0,dt,0],
-                                          [0,0,0,0,1,0,0,dt],
-                                          [0,0,0,0,0,1,0,0],
-                                          [0,0,0,0,0,0,1,0],
-                                          [0,0,0,0,0,0,0,1]])
-            self._state_estimate = state_transition * self._state_estimate
-            self._state_covariance = state_transition * self._state_covariance * (state_transition).getT() + self._motion_noise_covariance;
-
-            #update step
-            measurement_error = self._measurements - (self._sensor_jacobian * self._state_estimate)
-            S = self._sensor_jacobian * self._state_covariance * (self._sensor_jacobian).getT() + self._sensor_covariance
-            K = self._state_covariance * (self._sensor_jacobian).getT() * (S).getI()
-            self._state_estimate = self._state_estimate + (K * measurement_error)
-            self._state_covariance = (self._I - K * self._sensor_jacobian) * self._state_covariance
-
-#            self._odom_publisher.publish(self._odom)
+            if self._update_step_ready.acquire(blocking = False):
+                #prediction step
+                self._current_t = rospy.Time.now()
+                dt = (self._current_t - self._last_t).to_sec()
+                self._last_t = self._current_t
+                state_transition = np.matrix([[1,0,0,dt,0,0,(dt**2)/2.0,0],#same as the state jacobian
+                                              [0,1,0,0,dt,0,0,(dt**2)/2.0],
+                                              [0,0,1,0,0,dt,0,0],
+                                              [0,0,0,1,0,0,dt,0],
+                                              [0,0,0,0,1,0,0,dt],
+                                              [0,0,0,0,0,1,0,0],
+                                              [0,0,0,0,0,0,1,0],
+                                              [0,0,0,0,0,0,0,1]])
+                self._state_estimate = state_transition * self._state_estimate
+                self._state_covariance = state_transition * self._state_covariance * (state_transition).getT() + self._motion_noise_covariance;
+    #            print self._state_covariance
+ #               print(self._state_estimate)
+                #update step
+                measurement_error = self._measurements - (self._sensor_jacobian * self._state_estimate)
+                S = self._sensor_jacobian * self._state_covariance * (self._sensor_jacobian).getT() + self._sensor_covariance
+                K = self._state_covariance * (self._sensor_jacobian).getT() * (S).getI()
+                self._state_estimate = self._state_estimate + (K * measurement_error)
+                self._state_covariance = (self._I - K * self._sensor_jacobian) * self._state_covariance
+#                print(self._measurements)
+  #              print((K))
+    #            print(self._state_estimate)
+                self._odom_publisher.publish(self._odom)
+                self._br.sendTransform((self._state_estimate[0],self._state_estimate[1], 0.0 ),
+                                 quaternion_from_euler(0,0,(self._state_estimate[2])),
+                                 rospy.Time.now(),
+                                 "learner/odom",
+                                 "ardrone_base_link")
 
     def close(self):
         self._run = False  
 
     def updateAccelerometer(self, data):
-        self._update_step_ready.acquire()
+        self._measurements = np.matrix([[data.accel.linear.x], [data.accel.linear.y]])
+        self._update_step_ready.release()
         
     def updateEncoderOdom(self, data):
-        self._update_step_ready.acquire()
+        self._update_step_ready.release()
 
     def updateImu(self, data):
-        self._update_step_ready.acquire()
+        (roll,pitch,yaw) = euler_from_quaternion([float(data.orientation.x), float(data.orientation.y), float(data.orientation.z), float(data.orientation.w)])
+        self._measurements = np.matrix([[yaw],
+                                        [data.angular_velocity.z],
+                                        [data.linear_acceleration.x],
+                                        [data.linear_acceleration.y]])
+        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0],
+                                           [0,0,0,0,0,1,0,0],
+                                           [0,0,0,0,0,0,1,0],
+                                           [0,0,0,0,0,0,0,1]])
+        self._sensor_covariance = np.matrix([[1,0,0,0],
+                                             [0,1,0,0],
+                                             [0,0,1,0],
+                                             [0,0,0,1]])
+        self._sensor_covariance *= np.matrix([[data.orientation_covariance[8]],[data.angular_velocity_covariance[8]],[data.linear_acceleration_covariance[0]],[data.linear_acceleration_covariance[1]]])
+        self._update_step_ready.release()
 
 if __name__ == '__main__':
     main()

@@ -30,12 +30,18 @@ def main():
     rate = rospy.Rate(40.0)
 
     while not rospy.is_shutdown():
-        state_publisher.publish(learner_state)
+#        state_publisher.publish(learner_state)
         #TODO replace the zeroes below with the state params
+
         br.sendTransform((0.0, 0.0, 0.0),
                          quaternion_from_euler(0,0,0),
                          rospy.Time.now(),
-                         "learner/raw_odom",
+                         "learner/odom",
+                         "map")
+        br.sendTransform((0.0, 0.0, 0.0),
+                         quaternion_from_euler(0,0,0),
+                         rospy.Time.now(),
+                         "ardrone_base_link",
                          "map")
         rate.sleep()   
 

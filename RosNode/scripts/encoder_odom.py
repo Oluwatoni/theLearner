@@ -75,7 +75,6 @@ class OdomThread(Thread):
         self._speed = ((data.speed / 40.0) * 0.187) / self._dt
         #print self._speed
         self._last_t = rospy.Time.now()    
-        (roll,pitch,yaw) = euler_from_quaternion([float(self._odom.pose.pose.orientation.x), float(self._odom.pose.pose.orientation.y), float(self._odom.pose.pose.orientation.z), float(self._odom.pose.pose.orientation.w)])
         
         self._command_mutex.acquire()
         omega = (self._speed * tan(-self._steering)) / self._dbw
