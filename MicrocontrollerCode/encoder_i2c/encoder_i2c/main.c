@@ -15,15 +15,16 @@ volatile struct{
 	uint8_t pulse_count;
 	uint16_t dt;
 }pulses;
+volatile uint8_t pin_value;
 	
 inline void activate_PB4_interrupt(){
-	GIMSK |= 0b00100000;
 	PCMSK |= 0b00010000;
+	GIMSK |= 0b00100000;
 }
 
 inline void deactivate_PB4_interrupt(){
-	GIMSK &= 0;
-	PCMSK &= 0;
+	GIMSK &= ~(0b00100000);
+	PCMSK &= ~(0b00010000);
 }
 
 inline void activate_timer_interrupt(){
@@ -31,54 +32,42 @@ inline void activate_timer_interrupt(){
 }
 
 inline void deactivate_timer_interrupt(){
-	TIMSK &= 0;
+	TIMSK &= ~(1 << TOIE1);
 }
 
 int main(void){
-	cli();
-    //PB4 change interrupt setup 
-	activate_PB4_interrupt();
-
-//	set pin as an input pin
-	PORTB |= (0 << PB4);
+ //PB4 change interrupt setup 
+ //	set pin as an input pin
 	DDRB &= ~(1 << DDB4);
+	PORTB |= (0 << PB4);
+	//MCUCR |= (1 << PUD);
+	activate_PB4_interrupt();
 	
 	//set up timer
 	TCCR1 |= (1 << 2);
-	activate_timer_interrupt();
 	
 	pulses.pulse_count = 0;
 	pulses.dt = 0;
 	usiTwiSlaveInit(SLAVE_ADDRESS);
 	sei();
-	
-    while (1){
-		if(usiTwiDataInReceiveBuffer()){
-			switch(usiTwiReceiveByte()){
-				case 'r':
-					deactivate_PB4_interrupt();
-					deactivate_timer_interrupt();
-					usiTwiTransmitByte(pulses.pulse_count);
-					usiTwiTransmitByte(pulses.dt >> 8);
-					usiTwiTransmitByte(pulses.dt & 0xFF);
-					pulses.pulse_count = 0;
-					pulses.dt = 0;
-					activate_PB4_interrupt();
-					activate_timer_interrupt();
-					break;
+  while (1){
+	  if(usiTwiDataInReceiveBuffer()){
+		  switch(usiTwiReceiveByte()){
+			  case 'r':
+				  deactivate_PB4_interrupt();
+				  usiTwiTransmitByte(pulses.pulse_count);
+				  pulses.pulse_count = 0;
+				  activate_PB4_interrupt();
+				  break;
 			}
-		}
-	}
+	  }
+  }
 }
-
 ISR(PCINT0_vect){
-	uint8_t pin_value = PINB & (1 << PB4);
 	cli();
-	//to debounce the encoder
-	for (int i = 0; i < 20000; i++)
-		_NOP();
-	if (pin_value == (PINB & (1 << PB4)))
-		pulses.pulse_count++;
+	pin_value = PINB & (1 << PB4);
+	activate_timer_interrupt();
+	deactivate_PB4_interrupt();
 	sei();
 }
 
@@ -87,6 +76,12 @@ ISR(TIM1_OVF_vect){
 	TCNT1 = 156;
 	cli();
 	pulses.dt++;
-	sei();
+	if(pulses.dt > 2000){
+    if (pin_value == (PINB & (1 << PB4)))
+	    pulses.pulse_count++;
+    pulses.dt = 0;
+    activate_PB4_interrupt();
+    deactivate_timer_interrupt();
+  }
+  sei();
 }
-
