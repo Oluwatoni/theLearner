@@ -43,7 +43,7 @@ class PS3Controller:
             else:
                 self._command = 0
             self._command += int(30 * (-joy.axes[self._steer] +1)) << 1
-            self._command += int(255 *( -joy.axes[self._drive] + joy.axes[self._reverse])) << 8;
+            self._command += int(255 *( -joy.axes[self._drive] + joy.axes[self._reverse])) << 10;
             #print "0x%x" % int(self._command)
             self._command_publisher.publish(self._command)
         elif self._disable: 

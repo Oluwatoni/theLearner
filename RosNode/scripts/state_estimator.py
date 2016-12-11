@@ -13,7 +13,7 @@ from tf.transformations import quaternion_from_euler
 
 def main():
     rospy.init_node('state_estimator', anonymous = True)
-    state_publisher = rospy.Publisher('learner/true_odom',Odometry,queue_size = 1)
+    state_publisher = rospy.Publisher('learner/odom',Odometry,queue_size = 1)
     rospy.Subscriber("sensors/imu", Imu, EKF_implementation)
     br = tf.TransformBroadcaster()
     learner_state = Odometry()
@@ -30,12 +30,18 @@ def main():
     rate = rospy.Rate(40.0)
 
     while not rospy.is_shutdown():
-        state_publisher.publish(learner_state)
+#        state_publisher.publish(learner_state)
         #TODO replace the zeroes below with the state params
+
         br.sendTransform((0.0, 0.0, 0.0),
                          quaternion_from_euler(0,0,0),
                          rospy.Time.now(),
                          "learner/odom",
+                         "map")
+        br.sendTransform((0.0, 0.0, 0.0),
+                         quaternion_from_euler(0,0,0),
+                         rospy.Time.now(),
+                         "ardrone_base_link",
                          "map")
         rate.sleep()   
 

@@ -5,8 +5,12 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /Range1
         - /Range1/Status1
+        - /Imu1
+        - /Imu1/Status1
         - /Odometry1
+        - /Odometry1/Status1
       Splitter Ratio: 0.5
     Tree Height: 775
   - Class: rviz/Selection
@@ -138,7 +142,7 @@ Visualization Manager:
       Class: rviz_imu_plugin/Imu
       Enabled: true
       Name: Imu
-      Topic: /sensors/imu
+      Topic: /ardrone/imu
       Unreliable: false
       Value: true
     - Angle Tolerance: 0.100000001
@@ -154,7 +158,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: map
+    Fixed Frame: learner/odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -175,22 +179,24 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.86469316
+      Distance: 10
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.0444981121
-        Y: 0.148866147
-        Z: -0.105178572
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.999796748
+      Pitch: 0.785398126
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.87539399
+      Yaw: 0.785398185
     Saved: ~
 Window Geometry:
   Displays:
