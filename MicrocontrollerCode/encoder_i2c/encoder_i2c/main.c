@@ -72,11 +72,11 @@ ISR(PCINT0_vect){
 }
 
 ISR(TIM1_OVF_vect){
-	//F_CPU/(Prescaler)*(256-Timer preset) = no of interrupts per second
+	//F_CPU/(Prescalecar = 8)*(256-Timer preset - 156) = no of interrupts per second
 	TCNT1 = 156;
 	cli();
 	pulses.dt++;
-	if(pulses.dt > 2000){
+	if(pulses.dt > 2){//2ms debounce time
     if (pin_value == (PINB & (1 << PB4)))
 	    pulses.pulse_count++;
     pulses.dt = 0;

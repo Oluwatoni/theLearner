@@ -4,7 +4,7 @@ int readEncoderData(){
   Wire.beginTransmission(ENCODER_ADDRESS); // transmit to device #44 (0x2c)
   Wire.write('r');  
   Wire.endTransmission();
-  Wire.requestFrom(ENCODER_ADDRESS,3);
+  Wire.requestFrom(ENCODER_ADDRESS,1);
   uint8_t c[3] = {0,0,0};
   int i = 0;
   
