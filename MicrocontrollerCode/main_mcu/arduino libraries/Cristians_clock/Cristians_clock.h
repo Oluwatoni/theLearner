@@ -20,5 +20,5 @@ class Clock
 };
 
 extern String appendChecksum(String);
-extern uint8_t generateChecksum(char*, char);
+extern char generateChecksum(char*, char);
 #endif

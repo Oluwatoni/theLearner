@@ -1,6 +1,6 @@
 #include "Arduino.h"
-#ifndef CRISTIANS_CLOCK
-#define CRISTIANS_CLOCK
+#ifndef CRISTIANS_CLOCK_H
+#define CRISTIANS_CLOCK_H
 
 #include <inttypes.h>
 

@@ -46,11 +46,11 @@ String Clock:: appendTime(String msg){
 String appendChecksum(String msg){
   char buffer[msg.length()];
   msg.toCharArray(buffer, msg.length());
-  msg.concat(generateChecksum(buffer, msg.length()));
+  msg.concat((uint8_t)generateChecksum(buffer, msg.length()));
   return msg;
 }
 
-uint8_t generateChecksum(char data[], char sizeOfData){
+char generateChecksum(char data[], char sizeOfData){
   uint32_t sum = 0;
   while (sizeOfData)
     sum += (uint8_t)data[--sizeOfData];
