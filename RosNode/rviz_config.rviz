@@ -4,14 +4,10 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Range1
         - /Range1/Status1
-        - /Imu1
-        - /Imu1/Status1
-        - /Odometry1
-        - /Odometry1/Status1
-      Splitter Ratio: 0.5
+        - /Range5/Status1
+        - /Raw_Odometry1/Status1
+      Splitter Ratio: 0.48888889
     Tree Height: 775
   - Class: rviz/Selection
     Name: Selection
@@ -30,7 +26,7 @@ Panels:
   - Class: rviz/Time
     Experimental: false
     Name: Time
-    SyncMode: 0
+    SyncMode: 2
     SyncSource: ""
 Visualization Manager:
   Class: ""
@@ -142,7 +138,7 @@ Visualization Manager:
       Class: rviz_imu_plugin/Imu
       Enabled: true
       Name: Imu
-      Topic: /ardrone/imu
+      Topic: /sensors/imu
       Unreliable: false
       Value: true
     - Angle Tolerance: 0.100000001
@@ -151,14 +147,24 @@ Visualization Manager:
       Enabled: true
       Keep: 100
       Length: 0.100000001
-      Name: Odometry
+      Name: Raw_Odometry
+      Position Tolerance: 0.100000001
+      Topic: /learner/raw_odom
+      Value: true
+    - Angle Tolerance: 0.100000001
+      Class: rviz/Odometry
+      Color: 255; 25; 0
+      Enabled: true
+      Keep: 100
+      Length: 1
+      Name: EKF_Odometry
       Position Tolerance: 0.100000001
       Topic: /learner/odom
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: learner/odom
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -179,7 +185,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10
+      Distance: 12.8434515
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -193,10 +199,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.785398126
+      Pitch: 0.680398226
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.785398185
+      Yaw: 3.14040256
     Saved: ~
 Window Geometry:
   Displays:

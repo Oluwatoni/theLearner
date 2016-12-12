@@ -103,7 +103,6 @@ class OdomThread(Thread):
                          rospy.Time.now(),
                          "learner/base_link",
                          "learner/raw_odom")
-#                if not(rospy.is_shutdown):
         self._odom_publisher.publish(self._odom)
 
     def updateCommand(self, data):
