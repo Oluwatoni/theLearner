@@ -129,9 +129,9 @@ void extractData(char * msg, uint8_t msg_size){
     }
     msg++;
   }
-  temp[checksum_size++] = ',';
+  //temp[checksum_size++] = ',';
 
-  if (generateChecksum(temp, checksum_size) == raw_checksum.toInt())
+  if ((uint8_t)generateChecksum(temp, checksum_size) == raw_checksum.toInt())
   {
 #ifdef DEBUG
     Serial.println(raw_steering);
@@ -153,7 +153,7 @@ void extractData(char * msg, uint8_t msg_size){
     }
     Serial.println();
     Serial.println(raw_checksum);
-    Serial.println(generateChecksum(temp, checksum_size));
+    Serial.println((uint8_t)generateChecksum(temp, checksum_size));
   }
 #endif
 }
@@ -192,9 +192,8 @@ void recieveTime(char * msg, uint8_t msg_size){
     }
     msg++;
   }
-  temp[checksum_size++] = ',';
 
-  if (generateChecksum(temp, checksum_size) == raw_checksum.toInt())
+  if ((uint8_t)generateChecksum(temp, checksum_size) == raw_checksum.toInt())
   {
     long recieved_time = micros();
 #ifdef DEBUG

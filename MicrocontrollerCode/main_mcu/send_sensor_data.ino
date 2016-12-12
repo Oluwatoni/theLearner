@@ -31,12 +31,6 @@ void sendImuData(){
   msg.concat(",");
   msg.concat(Imu.GetGyroZ());
   msg.concat(",");
-//  msg.concat(Imu.GetMagX());
-//  msg.concat(",");
-//  msg.concat(Imu.GetMagY());
-//  msg.concat(",");
-//  msg.concat(Imu.GetMagZ());
-//  msg.concat(",");
   msg.concat(Car.GetBatteryLevel());
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
