@@ -22,7 +22,7 @@ void ultrasonicRead1(){
   
   now  = millis();
   if ((now - temp ) < ULTRASONIC_DELAY && (int)(now - temp) > 0){
-    delay((temp + ULTRASONIC_DELAY) - now); //make sure 15ms has elapsed before retrieving range data //TODO make define
+    delay((temp + ULTRASONIC_DELAY) - now); 
   }
 
   //MCU1
@@ -122,6 +122,7 @@ void filterUltrasonicData(uint8_t first_index, uint8_t last_index) {  // Sensor 
     filtered_distance[i] = getMedian(unfiltered_ultrasonic_data[i]);
   }
 }
+
 //ensures the echoes die down before pinging the sensors
 void ultrasonicDelay(unsigned long now, unsigned long temp){
   if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)

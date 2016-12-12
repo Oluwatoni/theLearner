@@ -24,7 +24,7 @@
 #define SONAR_NUM 7
 #define FILTER_ARRAY_SIZE 3
 #define MAX_DISTANCE 250 //in cm
-#define ULTRASONIC_DELAY 14
+#define ULTRASONIC_DELAY 18
 #define SENSOR_WAVE_DELAY 20
 #define WHEEL_CIRCUM 0.187
 #define ENCODER_ADDRESS 0x07
@@ -41,8 +41,8 @@ IMU Imu(50);//frequency in Hz
 Learner_car Car;
 Clock sensor_clock;
 
-NewPing sonar[SONAR_NUM - 4] =       // Sensor object array.
-{
+// Sensor object array.
+NewPing sonar[SONAR_NUM - 4] ={
   NewPing(7, 7, MAX_DISTANCE), //ultra 5 // Each sensor's trigger pin, echo pin, and max distance to ping.
   NewPing(A2, A2, MAX_DISTANCE),//ultra 7
   NewPing(2, 2, MAX_DISTANCE)//ultra 6
@@ -76,28 +76,16 @@ void loop(){
   }
   sendAccData();
   sendImuData();
-  sendEncData();
   sendUltrasonicData1();
-  temp = millis();
-  sendImuData();
-  sendEncData();
   sendAccData();
-  now = millis();
-  ultrasonicDelay(now, temp);
+  sendImuData();
   sendUltrasonicData2();
-  temp = millis();
+  sendAccData();
   sendImuData();
   sendEncData();
-  sendAccData();
-  now = millis();
-  ultrasonicDelay(now, temp);
   sendUltrasonicData3();
-  temp = millis();
-  sendImuData();
-  sendEncData();
   sendAccData();
-  now = millis();
-  ultrasonicDelay(now, temp);
+  sendImuData();
   time_counter++;
 }
 
