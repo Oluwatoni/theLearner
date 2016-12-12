@@ -7,7 +7,7 @@ from tf.transformations import quaternion_from_euler
 if __name__ == '__main__':
     rospy.init_node("ultrasonic_tf_publisher");
     br = tf.TransformBroadcaster()
-    rate = rospy.Rate(40.0)
+    rate = rospy.Rate(15.0)
     
     while not rospy.is_shutdown():
         br.sendTransform((0.067, 0.076, 0.0),

@@ -72,65 +72,66 @@ class ArduinoMonitor (Thread):
         self._enc_pub = rospy.Publisher('sensors/encoder', RawSpeedEncoder, queue_size = 1)
         self._old_command = ""
 
-    def run(self):
-        while self._running:
-            #if data is available in the serial buffer    
-            try:            
-                data_available = self._serial_port.in_waiting != 0
-            except IOError:
-                if self._running:
-                    self._serial_port.close()
-                    self._serial_port.open()
-                    print "reopening serial port"
-                continue
-                
-            if data_available:
-                #read a line
-                self._sensorMsg = self._serial_port.readline()
-                self._sensorReadings = self._sensorMsg.split(',')
-                #print self._sensorReadings
-
-                    #checksum check
-                if not(self.data_is_valid(self._sensorReadings)):
-                    continue #wait for the next message to come in
-                #valid message
-                try:
-                    self._sensorReadings[0]
-                except IndexError:
-                    continue
-                    
-                else:
-                    if self._sensorReadings[0] == 'a':
-                        self.publish_accelerometer()
-                    elif self._sensorReadings[0] == 'e':
-                        self.publish_encoder()
-                    elif self._sensorReadings[0] == 'i':
-                        self.publish_imu()
-                    elif self._sensorReadings[0] == 't':
-                        self.synchronize_time()
-                    elif self._sensorReadings[0] == 'u':
-                        order_u = [5,0,3]
-                        rec_time = [self._sensorReadings[4], self._sensorReadings[5]]
-                        self.publish_ultrasonic(order_u,rec_time)
-                    elif self._sensorReadings[0] == 'v':
-                        order_v = [4,1]
-                        rec_time =  [self._sensorReadings[3], self._sensorReadings[4]]
-                        self.publish_ultrasonic(order_v, rec_time)
-                    elif self._sensorReadings[0] == 'w':
-                        order_w = [6,2]
-                        rec_time =  [self._sensorReadings[3], self._sensorReadings[4]]
-                        self.publish_ultrasonic(order_w, rec_time)
-                    else:
-                        print "Invalid"
-                        print self._sensorReadings[0]
-            else:
-                pass
+    def readBuffer(self):
+        data = self._serial_port.read()
+        if data == len(data):
+            print "reopening port"
+            self._serial_port.close()
+            self._serial_port.open()
+        n = self._serial_port.inWaiting()
+        for num in range(n):
+            data += self._serial_port.read()
+        return str(data)
     
-    def publish_accelerometer(self):
-        self._acc_msg.accel.accel.linear.x = (float(self._sensorReadings[1]) - 577) * 0.0817 
-        self._acc_msg.accel.accel.linear.y = (float(self._sensorReadings[2]) - 560) * 0.0853 
-        self._acc_msg.header.stamp.secs = int(self._sensorReadings[3])
-        self._acc_msg.header.stamp.nsecs = int(self._sensorReadings[4]) * 1000
+    def processIncomingData(self, data):
+        if data[0] == 'a':
+            self.publish_accelerometer(data)
+        elif data[0] == 'e':
+            self.publish_encoder(data)
+        elif data[0] == 'i':
+            self.publish_imu(data)
+        elif data[0] == 't':
+            self.synchronize_time()
+        elif data[0] == 'u':
+            order_u = [5,0,3]
+            rec_time = [data[4], data[5]]
+            self.publish_ultrasonic(order_u,rec_time,data)
+        elif data[0] == 'v':
+            order_v = [4,1]
+            rec_time =  [data[3], data[4]]
+            self.publish_ultrasonic(order_v, rec_time,data)
+        elif data[0] == 'w':
+            order_w = [6,2]
+            rec_time =  [data[3], data[4]]
+            self.publish_ultrasonic(order_w, rec_time,data)
+        else:
+            print "Invalid"
+            print data[0]
+        
+    def run(self):
+        line = ""
+        newdata = ""
+
+        while self._running:
+            #if data is available in the serial buffer 
+            if newdata: 
+                line = newdata
+                newdata = ""
+            line += self.readBuffer()
+            sensor_data = line.split("\r\n")
+            for string in sensor_data[0:-1]:
+                readings = string.split(',')
+                if len(readings) >= 3:
+                    if int(readings[-1]) == generateChecksum(string[:-(len(readings[-1]))]): 
+                        self.processIncomingData(readings)
+            newdata = sensor_data[-1]
+        self._serial_port.close()
+
+    def publish_accelerometer(self,data):
+        self._acc_msg.accel.accel.linear.x = (float(data[1]) - 577) * 0.0817 
+        self._acc_msg.accel.accel.linear.y = (float(data[2]) - 560) * 0.0853 
+        self._acc_msg.header.stamp.secs = int(data[3])
+        self._acc_msg.header.stamp.nsecs = int(data[4]) * 1000
         self._seq += 1
         self._acc_msg.header.seq = self._seq
         self._acc_pub.publish(self._acc_msg)
@@ -179,9 +180,9 @@ class ArduinoMonitor (Thread):
                           "learner/base_link")
 
     #publishes ultrasonic data in the order supplied
-    def publish_ultrasonic(self, order, time):
+    def publish_ultrasonic(self, order, time,data):
         for i in range(len(order)):
-            self._ultrasonic_msg.range = float(self._sensorReadings[i+1]) / 100.0
+            self._ultrasonic_msg.range = float(data[i+1]) / 100.0
             self._ultrasonic_msg.header.frame_id = "ultrasonic_" + str(order[i]) + "_link"
             self._ultrasonic_msg.header.stamp.secs = int(time[0])
             self._ultrasonic_msg.header.stamp.nsecs = int(time[1]) * 1000
@@ -192,9 +193,9 @@ class ArduinoMonitor (Thread):
     def synchronize_time(self):
         time_msg =  "t,"
         now = rospy.Time.now()
-        time_msg += (str(now.secs) + ",")
-        time_msg += (str(now.nsecs/1000) + ",")
-        time_msg += str(generate_checksum(time_msg.split(","),False))
+        time_msg += str(now.secs) + ","
+        time_msg += str(now.nsecs/1000) + ","
+        time_msg += str(generateChecksum(time_msg))
         time_msg += "\n"
         self._serial_port.write(time_msg); 
 
@@ -210,37 +211,18 @@ class ArduinoMonitor (Thread):
             #set brake
             msg += str(data.data & 1)
             msg += ","
-            msg += str(generate_checksum(msg.split(","),False))
+            msg += str(generateChecksum(msg))
             msg += "\n" 
             self._serial_port.write(msg)
         self._old_command = data.data
 
-    #validates message using the checksum
-    def data_is_valid(self, data):
-        try:
-            checksum = int(data.pop())
-        except ValueError:
-            return False
-        if generate_checksum(data, True)  == checksum:
-            #print "valid data"
-            return True
-        else:
-            print "invalid data"
-            print checksum
-            print generate_checksum(data,True)
-            print data
-            return False
-
     #stops the thread
     def stop(self):
         print "Im stopping!"
-        self._serial_port.close()
         self._running = 0
-        
-def generate_checksum(data, check_if_number):
-    sumOfBytes = 0
-    for i in range(len(data)):
-        for char in data[i]:
-            sumOfBytes += ord(char)
-        sumOfBytes += ord(",")
-    return (sumOfBytes % 255)
+ 
+def generateChecksum(data):
+    checksum  = 0
+    for char in data:
+        checksum += ord(char)
+    return (checksum % 255)

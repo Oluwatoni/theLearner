@@ -59,9 +59,9 @@ class EKFThread(Thread):
         self._odom.twist.twist.angular.z = 0
 
         self._odom_publisher = rospy.Publisher('learner/odom', Odometry,queue_size = 1)
-        rospy.Subscriber("sensors/accelerometer", AccelWithCovarianceStamped, self.updateAccelerometer)
-        rospy.Subscriber("ardrone/imu", Imu, self.updateImu)
-        rospy.Subscriber("learner/raw_odom", Odometry, self.updateEncoderOdom)
+#        rospy.Subscriber("sensors/accelerometer", AccelWithCovarianceStamped, self.updateAccelerometer)
+        rospy.Subscriber("sensors/imu", Imu, self.updateImu)
+#        rospy.Subscriber("learner/raw_odom", Odometry, self.updateEncoderOdom)
         self._update_step_ready.acquire()
         
         #initialize EKF matrices
@@ -98,7 +98,7 @@ class EKFThread(Thread):
 
     def run(self):
         while self._run:
-            if self._update_step_ready.acquire(blocking = False):
+            if self._update_step_ready.acquire():
                 #prediction step
                 self._current_t = rospy.Time.now()
                 dt = (self._current_t - self._last_t).to_sec()
@@ -124,21 +124,49 @@ class EKFThread(Thread):
 #                print(self._measurements)
   #              print((K))
     #            print(self._state_estimate)
+                self._odom.pose.pose.position.x = self._state_estimate[0]
+                self._odom.pose.pose.position.y = self._state_estimate[1]
+                (x,y,z,w) = quaternion_from_euler(0.0, 0.0, self._state_estimate[2])
+                self._odom.pose.pose.orientation.x = x
+                self._odom.pose.pose.orientation.y = y
+                self._odom.pose.pose.orientation.z = z
+                self._odom.pose.pose.orientation.w = w
+                self._odom.twist.twist.linear.x = self._state_estimate[3] 
+                self._odom.twist.twist.linear.y = self._state_estimate[4]
+                self._odom.twist.twist.angular.z = self._state_estimate[5]
                 self._odom_publisher.publish(self._odom)
                 self._br.sendTransform((self._state_estimate[0],self._state_estimate[1], 0.0 ),
                                  quaternion_from_euler(0,0,(self._state_estimate[2])),
                                  rospy.Time.now(),
                                  "learner/odom",
-                                 "ardrone_base_link")
+                                 "learner/base_link")
 
     def close(self):
         self._run = False  
 
     def updateAccelerometer(self, data):
-        self._measurements = np.matrix([[data.accel.linear.x], [data.accel.linear.y]])
+        self._measurements = np.matrix([[data.accel.accel.linear.x],
+                                        [data.accel.accel.linear.y]])
+        self._sensor_jacobian = np.matrix([[0,0,0,0,0,0,1,0],
+                                           [0,0,0,0,0,0,0,1]])
+        self._sensor_covariance = np.matrix([[1,0],
+                                             [0,1]])
+        self._sensor_covariance *= np.matrix([[data.accel.covariance[0]],[data.accel.covariance[7]]])
         self._update_step_ready.release()
         
     def updateEncoderOdom(self, data):
+        self._measurements = np.matrix([[data.pose.pose.position.x],
+                                        [data.pose.pose.position.y],
+                                        [data.twist.twist.linear.x],
+                                        [data.twist.twist.linear.y]])
+        self._sensor_jacobian = np.matrix([[1,0,0,0,0,0,0,0],
+                                           [0,1,0,0,0,0,0,0],
+                                           [0,0,0,1,0,0,0,0],
+                                           [0,0,0,0,1,0,0,0]])
+        self._sensor_covariance = np.matrix([[0.01,0,0,0],
+                                             [0,0.01,0,0],
+                                             [0,0,0.01,0],
+                                             [0,0,0,0.01]])
         self._update_step_ready.release()
 
     def updateImu(self, data):

@@ -71,11 +71,13 @@ class OdomThread(Thread):
         self._run.release()  
 
     def updateOdom(self, data):
+        if data.speed == 0.0:
+            return
         self._dt = (rospy.Time.now() - self._last_t).to_sec()
         self._speed = ((data.speed / 40.0) * 0.187) / self._dt
         #print self._speed
         self._last_t = rospy.Time.now()    
-        
+        (roll,pitch,yaw) = euler_from_quaternion([float(self._odom.pose.pose.orientation.x), float(self._odom.pose.pose.orientation.y), float(self._odom.pose.pose.orientation.z), float(self._odom.pose.pose.orientation.w)])
         self._command_mutex.acquire()
         omega = (self._speed * tan(-self._steering)) / self._dbw
         if self._throttle < 0:
@@ -83,12 +85,9 @@ class OdomThread(Thread):
         vx = self._speed * cos(yaw) 
         vy = self._speed * sin(yaw) 
         self._command_mutex.release()
-
         self._odom.header.stamp = rospy.Time.now()
-        
         self._odom.pose.pose.position.x += (vx * self._dt)
         self._odom.pose.pose.position.y += (vy * self._dt)
-#                print self._throttle
         yaw = yaw + omega * self._dt
         (x,y,z,w) = quaternion_from_euler(roll, pitch, yaw)
         self._odom.pose.pose.orientation.x = x
