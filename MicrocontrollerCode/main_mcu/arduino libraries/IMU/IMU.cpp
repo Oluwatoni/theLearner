@@ -4,15 +4,15 @@
 IMU::IMU(float frequency){
   update_frequency = frequency;
   //default values
-  accel_min[0] = ((float) -280);
-  accel_max[0] = ((float) 256);
-  accel_min[1] = ((float) -286);
-  accel_max[1] = ((float) 260);
-  accel_min[2] = ((float) -274);
-  accel_max[2] = ((float) 249);
-  gyro_average[0] = ((float) -39.98);
-  gyro_average[1] = ((float) -34.78);
-  gyro_average[2] = ((float) 10.21);
+  accel_min[0] = ((float) -266);
+  accel_max[0] = ((float) 262);
+  accel_min[1] = ((float) -278);
+  accel_max[1] = ((float) 263);
+  accel_min[2] = ((float) -260);
+  accel_max[2] = ((float) 265);
+  gyro_average[0] = ((float) -36.96);
+  gyro_average[1] = ((float) -39.99);
+  gyro_average[2] = ((float) 5.29);
   accel_offset[0] = ((accel_min[0] + accel_max[0]) / 2.0f);
   accel_offset[1] = ((accel_min[1] + accel_max[1]) / 2.0f);
   accel_offset[2] = ((accel_min[2] + accel_max[2]) / 2.0f);
