@@ -83,7 +83,7 @@ void IMU::Accel_Init(){
   // Because our main loop runs at 50Hz we adjust the output data rate to 50Hz (25Hz bandwidth)
   Wire.beginTransmission(ACCEL_ADDRESS);
   WIRE_SEND(0x2C);  // Rate
-  WIRE_SEND(0x09);  // Set to 50Hz, normal operation
+  WIRE_SEND(0x0A);  // Set to 100Hz, normal operation
   Wire.endTransmission();
   delay(5);
 }
