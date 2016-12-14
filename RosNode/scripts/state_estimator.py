@@ -38,11 +38,11 @@ def main():
                          rospy.Time.now(),
                          "learner/odom",
                          "map")
-        br.sendTransform((0.0, 0.0, 0.0),
-                         quaternion_from_euler(0,0,0),
-                         rospy.Time.now(),
-                         "learner/base_link",
-                         "learner/odom")
+#       br.sendTransform((0.0, 0.0, 0.0),
+#                        quaternion_from_euler(0,0,0),
+#                        rospy.Time.now(),
+#                        "learner/base_link",
+#                        "learner/odom")
         rate.sleep()   
 
 def EKF_implementation(self):

@@ -124,7 +124,7 @@ class ArduinoMonitor (Thread):
                 if len(readings) >= 3:
                     try:
                         int(readings[-1])
-                    except ValueErrror:
+                    except ValueError:
                         continue
                     if int(readings[-1]) == generateChecksum(string[:-(len(readings[-1]))]): 
                         self.processIncomingData(readings)

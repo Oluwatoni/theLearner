@@ -102,6 +102,11 @@ class OdomThread(Thread):
                          rospy.Time.now(),
                          "learner/base_link",
                          "learner/raw_odom")
+        self._br.sendTransform((0,0,0),
+                         (0,0,0,1),
+                         rospy.Time.now(),
+                         "learner/raw_odom",
+                         "map")
         self._odom_publisher.publish(self._odom)
 
     def updateCommand(self, data):
