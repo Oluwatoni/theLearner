@@ -122,6 +122,10 @@ class ArduinoMonitor (Thread):
             for string in sensor_data[0:-1]:
                 readings = string.split(',')
                 if len(readings) >= 3:
+                    try:
+                        int(readings[-1])
+                    except ValueErrror:
+                        continue
                     if int(readings[-1]) == generateChecksum(string[:-(len(readings[-1]))]): 
                         self.processIncomingData(readings)
             newdata = sensor_data[-1]
