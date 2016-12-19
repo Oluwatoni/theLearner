@@ -134,11 +134,11 @@ class EKFThread(Thread):
                 self._odom.twist.twist.linear.y = self._state_estimate[4]
                 self._odom.twist.twist.angular.z = self._state_estimate[5]
                 self._odom_publisher.publish(self._odom)
-#               self._br.sendTransform((self._state_estimate[0],self._state_estimate[1], 0.0),
-#                                quaternion_from_euler(0,0,(self._state_estimate[2])),
-#                                rospy.Time.now(),
-#                                "learner/odom",
-#                                "learner/base_link")
+                self._br.sendTransform((self._state_estimate[0],self._state_estimate[1], 0.0),
+                                 quaternion_from_euler(0,0,0),#(self._state_estimate[2])),
+                                 rospy.Time.now(),
+                                 "learner/odom",
+                                 "odom_combined")
                 self._sensor_mutex.release()
 
     def close(self):
@@ -184,8 +184,9 @@ class EKFThread(Thread):
         acc_y = -(data.linear_acceleration.x) * sin(self._state_estimate[3]-pi/2) + data.linear_acceleration.y * sin(self._state_estimate[3])
         self._measurements = np.matrix([[yaw],
                                         [data.angular_velocity.z],
-                                        [data.linear_acceleration.x],
-                                        [data.linear_acceleration.y]])
+                                        [acc_x],
+                                        [acc_y]])
+#       print yaw
         self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0],
                                            [0,0,0,0,0,1,0,0],
                                            [0,0,0,0,0,0,1,0],
