@@ -31,6 +31,7 @@ class OdomThread(Thread):
         self._br = tf.TransformBroadcaster()
         
         self._speed_available = False
+        self._updateOdomFlag = 0
         self._odom = Odometry()
         self._speed = 0
         self._steering = 0
@@ -61,6 +62,7 @@ class OdomThread(Thread):
         self._odom.twist.twist.angular.z = 0
         self._odom_publisher = rospy.Publisher('learner/raw_odom',Odometry,queue_size = 1)
         rospy.Subscriber("sensors/encoder", RawSpeedEncoder, self.updateOdom)
+        rospy.Subscriber("learner/odom", Odometry, self.getCurrentOdom)
         rospy.Subscriber("learner/command", Int32, self.updateCommand)
         self._run.acquire()
     
@@ -70,9 +72,21 @@ class OdomThread(Thread):
     def close(self):
         self._run.release()  
 
+    def getCurrentOdom(self, data):
+        if self._updateOdomFlag:
+            self._updateOdomFlag = False
+            self._odom.header.stamp = data.header.stamp
+            self._odom.pose.pose.position.x = data.pose.pose.position.x
+            self._odom.pose.pose.position.y = data.pose.pose.position.y
+            self._odom.pose.pose.orientation.x = data.pose.pose.orientation.x
+            self._odom.pose.pose.orientation.y = data.pose.pose.orientation.y
+            self._odom.pose.pose.orientation.z = data.pose.pose.orientation.z
+            self._odom.pose.pose.orientation.w = data.pose.pose.orientation.w
+            self._odom.twist.twist.linear.x = data.twist.twist.linear.x
+            self._odom.twist.twist.linear.y = data.twist.twist.linear.y
+            self._odom.twist.twist.angular.z = data.twist.twist.angular.z
+
     def updateOdom(self, data):
-#       if data.speed == 0.0:
-#           return
         self._dt = (rospy.Time.now() - self._last_t).to_sec()
         self._speed = ((data.speed / 40.0) * 0.187) / self._dt
         #print self._speed
@@ -97,6 +111,7 @@ class OdomThread(Thread):
         self._odom.twist.twist.linear.x = vx
         self._odom.twist.twist.linear.y = vy
         self._odom.twist.twist.angular.z = omega
+        self._odom_publisher.publish(self._odom)
         self._br.sendTransform((self._odom.pose.pose.position.x, self._odom.pose.pose.position.y, 0),
                          (x,y,z,w),
                          rospy.Time.now(),
@@ -107,7 +122,7 @@ class OdomThread(Thread):
                          rospy.Time.now(),
                          "learner/raw_odom",
                          "map")
-        self._odom_publisher.publish(self._odom)
+        self._updateOdomFlag = True
 
     def updateCommand(self, data):
         self._command_mutex.acquire()
