@@ -145,6 +145,23 @@ class EKFThread(Thread):
         self._run = False  
         self._update_step_ready.release()
 
+    #from http://www.varesano.net/blog/fabio/simple-gravity-compensation-9-dom-imus
+    def gravity_compensate(self, q, acc):
+        acc = np.array([[acc.x],[acc.y],[acc.z]])
+#       print "old"
+#       print acc
+        acc /= 9.81
+        q = np.array([[q.w],[q.x],[q.y],[q.z]])
+        g = np.array([[0.0], [0.0], [0.0]])
+        # get expected direction of gravity
+        g[0] = 2 * (q[1] * q[3] - q[0] * q[2])
+        g[1] = 2 * (q[0] * q[1] + q[2] * q[3])
+        g[2] = q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]
+        acc -= g
+#       print (acc * 9.81)
+        # compensate accelerometer readings with the expected direction of gravity
+        return (acc * 9.81)
+
     def updateAccelerometer(self, data):
         self._sensor_mutex.acquire()
         acc_x = -(data.accel.accel.linear.x) * cos(self._state_estimate[3]-pi/2) - data.accel.accel.linear.y * cos(self._state_estimate[3])
@@ -182,11 +199,13 @@ class EKFThread(Thread):
         (roll,pitch,yaw) = euler_from_quaternion([float(data.orientation.x), float(data.orientation.y), float(data.orientation.z), float(data.orientation.w)])
         acc_x = -(data.linear_acceleration.x) * cos(self._state_estimate[3]-pi/2) - data.linear_acceleration.y * cos(self._state_estimate[3])
         acc_y = -(data.linear_acceleration.x) * sin(self._state_estimate[3]-pi/2) + data.linear_acceleration.y * sin(self._state_estimate[3])
+        ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
+
         self._measurements = np.matrix([[yaw],
                                         [data.angular_velocity.z],
-                                        [acc_x],
-                                        [acc_y]])
-#       print yaw
+                                        [ground_acc[0]],
+                                        [ground_acc[1]]])
+
         self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0],
                                            [0,0,0,0,0,1,0,0],
                                            [0,0,0,0,0,0,1,0],
