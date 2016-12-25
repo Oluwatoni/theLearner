@@ -203,8 +203,6 @@ class EKFThread(Thread):
     def updateImu(self, data):
         self._sensor_mutex.acquire()
         (roll,pitch,yaw) = euler_from_quaternion([float(data.orientation.x), float(data.orientation.y), float(data.orientation.z), float(data.orientation.w)])
-        acc_x = -(data.linear_acceleration.x) * cos(self._state_estimate[3]-pi/2) - data.linear_acceleration.y * cos(self._state_estimate[3])
-        acc_y = -(data.linear_acceleration.x) * sin(self._state_estimate[3]-pi/2) + data.linear_acceleration.y * sin(self._state_estimate[3])
         ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
 
         self._measurements = np.matrix([[yaw],
