@@ -4,19 +4,12 @@ import rospy
 import time
 import tf
 import numpy as np
-from threading import Thread
+from threading import Thread, Semaphore
 from sensor_msgs.msg import Range
 from math import pi, radians
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry, OccupancyGrid
-
-#read in serial port
-global ultrasonic_sensors
-try:
-    ultrasonic_sensors = sys.argv[1,:]
-except IndexError:
-    print "provide the sensors"
-    sys.exit(0)
 
 def main():
     rospy.init_node('map_server', anonymous = True)
@@ -39,23 +32,46 @@ class SensorUpdateThread(Thread):
 
         self._sensor_position = [0,0]
         self._sensor_orientation = 0
+        origin = Pose()
+
         self._base_link_id = "learner/base_link"
+        self._map = OccupancyGrid()
+        self._map.header.frame_id = "map"
+        self._map.info.map_load_time = rospy.Time.now()
+        self._map.info.resolution = 0.02
+        self._map.info.width = 300
+        self._map.info.height = 300
+        origin.position.x = (self._map.info.width * self._map.info.resolution) /-2.0
+        origin.position.y = (self._map.info.height * self._map.info.resolution) /-2.0
+        origin.position.z = 0
+        origin.orientation.x = 0
+        origin.orientation.y = 0
+        origin.orientation.z = 0
+        origin.orientation.w = 1
+        self._map.info.origin = origin
+        self._map.data = ([-1] * 300) * 300 #np.ones((2,2),dtype=np.int8)#((self._map.info.width,self._map.info.height))
+#       self._map.data *= -1
+        ultrasonic_sensors = str(rospy.get_param("~mapping_sensors")).split(",")
 
         for sensor in ultrasonic_sensors:
-            rospy.Subscriber(sensor, range, self.updateMap)
+            rospy.Subscriber(sensor, Range, self.ultrasonicCallback)
         rospy.Subscriber("learner/odom", Odometry, self.updateRobotPosition)
+        self._map_publisher = rospy.Publisher('learner/map',OccupancyGrid,queue_size = 1)
+        self._map_publisher.publish(self._map)
         self._update_map.acquire()
 
     def run(self):
         while self._run:
-            if self._update_map.acquire():
-                if not(self._run):
-                    break
-                pass#put map update here
+            self._map_publisher.publish(self._map)
+            time.sleep(1)
+#           if self._update_map.acquire():
+#               if not(self._run):
+#                   break
+#               pass#put map update here
 
     def close(self):
         self._run = False  
-        self._update_step_ready.release()
+        self._update_map.release()
 
     def updateRobotPosition(self, data):
         self._position_mutex.acquire()
