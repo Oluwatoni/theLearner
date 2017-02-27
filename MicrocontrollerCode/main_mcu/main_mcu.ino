@@ -74,17 +74,16 @@ void loop(){
     time_counter = 0;
     sensor_clock.requestTime();
   }
-  sendAccData();
   sendImuData();
+  delay(5);
   sendUltrasonicData1();
-  sendAccData();
   sendImuData();
+  delay(5);
   sendUltrasonicData2();
-  sendAccData();
   sendImuData();
   sendEncData();
+  delay(5);
   sendUltrasonicData3();
-  sendAccData();
   sendImuData();
   time_counter++;
 }

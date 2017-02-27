@@ -61,8 +61,8 @@ class EKFThread(Thread):
 
         self._odom_publisher = rospy.Publisher('learner/odom', Odometry,queue_size = 1)
 #       rospy.Subscriber("sensors/accelerometer", AccelWithCovarianceStamped, self.updateAccelerometer)
-        rospy.Subscriber("torso_lift_imu/data", Imu, self.updateImu)
-#       rospy.Subscriber("learner/raw_odom", Odometry, self.updateEncoderOdom)
+        rospy.Subscriber("imu/data", Imu, self.updateImu)
+        rospy.Subscriber("learner/raw_odom", Odometry, self.updateEncoderOdom)
         self._update_step_ready.acquire()
         
         #initialize EKF matrices
@@ -75,8 +75,8 @@ class EKFThread(Thread):
                                             [0,0,0,0,0,10,0,0],
                                             [0,0,0,0,0,0,10,0],
                                             [0,0,0,0,0,0,0,10]])
-        self._motion_noise_covariance = np.matrix([[0.01,0,0,0,0,0,0,0], #process noise covariance matrix
-                                                   [0,0.01,0,0,0,0,0,0],
+        self._motion_noise_covariance = np.matrix([[0.001,0,0,0,0,0,0,0], #process noise covariance matrix
+                                                   [0,0.001,0,0,0,0,0,0],
                                                    [0,0,0.001,0,0,0,0,0],
                                                    [0,0,0,0.01,0,0,0,0],
                                                    [0,0,0,0,0.01,0,0,0],
@@ -205,19 +205,19 @@ class EKFThread(Thread):
         (roll,pitch,yaw) = euler_from_quaternion([float(data.orientation.x), float(data.orientation.y), float(data.orientation.z), float(data.orientation.w)])
         ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
 
-        self._measurements = np.matrix([[yaw],
-                                        [data.angular_velocity.z],
-                                        [ground_acc[0]],
-                                        [ground_acc[1]]])
+        self._measurements = np.matrix([[yaw]])#,
+                                      # [data.angular_velocity.z],
+                                      # [ground_acc[0]],
+                                      # [ground_acc[1]]])
 
-        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0],
-                                           [0,0,0,0,0,1,0,0],
-                                           [0,0,0,0,0,0,1,0],
-                                           [0,0,0,0,0,0,0,1]])
-        self._sensor_covariance = np.matrix([[data.orientation_covariance[8],0,0,0],
-                                             [0,data.angular_velocity_covariance[8],0,0],
-                                             [0,0,data.linear_acceleration_covariance[0],0],
-                                             [0,0,0,data.linear_acceleration_covariance[1]]])
+        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0]])#,
+                                     #     [0,0,0,0,0,1,0,0],
+                                      #    [0,0,0,0,0,0,1,0],
+                                      #    [0,0,0,0,0,0,0,1]])
+        self._sensor_covariance = np.matrix([[data.orientation_covariance[8]]])#,0,0,0],
+                                         #   [0,data.angular_velocity_covariance[8],0,0],
+#                                            [0,0,data.linear_acceleration_covariance[0],0],
+#                                            [0,0,0,data.linear_acceleration_covariance[1]]])
         self._update_step_ready.release()
 
 if __name__ == '__main__':

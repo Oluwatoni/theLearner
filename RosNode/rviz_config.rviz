@@ -139,7 +139,7 @@ Visualization Manager:
       Class: rviz_imu_plugin/Imu
       Enabled: true
       Name: Imu
-      Topic: /sensors/imu
+      Topic: /imu/data
       Unreliable: false
       Value: true
     - Angle Tolerance: 0.100000001

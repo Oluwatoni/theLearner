@@ -95,14 +95,14 @@ class OdomThread(Thread):
         self._command_mutex.acquire()
         if self._throttle < 0:
             self._speed *= -1
-        omega = (self._speed * tan(-self._steering)) / self._dbw
+        omega = 0 # (self._speed * tan(-self._steering)) / self._dbw
         vx = self._speed * cos(yaw) 
         vy = self._speed * sin(yaw) 
         self._command_mutex.release()
         self._odom.header.stamp = rospy.Time.now()
         self._odom.pose.pose.position.x += (vx * self._dt)
         self._odom.pose.pose.position.y += (vy * self._dt)
-        yaw = yaw + omega * self._dt
+        yaw = yaw + (omega * self._dt)
         (x,y,z,w) = quaternion_from_euler(roll, pitch, yaw)
         self._odom.pose.pose.orientation.x = x
         self._odom.pose.pose.orientation.y = y

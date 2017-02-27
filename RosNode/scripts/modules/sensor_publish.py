@@ -48,9 +48,9 @@ class ArduinoMonitor (Thread):
         rospy.Subscriber("learner/command", Int32, self.vehicle_control) 
 
         for i in range(7):
-            self._ultrasonic_pub.append(rospy.Publisher('sensors/ultrasonic_'+str(i), Range, queue_size = 1))
+            self._ultrasonic_pub.append(rospy.Publisher('sensors/ultrasonic_' + str(i), Range, queue_size = 1))
         self._battery_pub = rospy.Publisher('sensors/battery_level', Int16, queue_size = 1)
-        self._imu_pub = rospy.Publisher('sensors/imu', Imu, queue_size = 1)
+        self._imu_pub = rospy.Publisher('imu/data_raw', Imu, queue_size = 1)
         self._imu_msg.header.frame_id = 'imu_link'
         self._imu_msg.orientation_covariance = [ 0.0025 , 0 , 0,
                                                  0, 0.0025, 0,
@@ -154,28 +154,27 @@ class ArduinoMonitor (Thread):
         self._enc_pub.publish(self._enc_msg)
 
     def publish_imu(self,data):
-        yaw =  -1 * float(data[1])
+        yaw = float(data[1])
         pitch = float(data[2])
         roll = float(data[3])
         self._imu_msg.linear_acceleration.x = float(data[4])
         self._imu_msg.linear_acceleration.y = float(data[5])
         self._imu_msg.linear_acceleration.z = float(data[6])
 #       print self._imu_msg.linear_acceleration
-        self._imu_msg.angular_velocity.x = float(data[7])# * radians(0.06957) #gyro gain
-        self._imu_msg.angular_velocity.y = float(data[8])# * radians(0.06957)
-        self._imu_msg.angular_velocity.z = float(data[9])# * radians(0.06957)
+        self._imu_msg.angular_velocity.x = float(data[7]) * radians(0.06957) #gyro gain
+        self._imu_msg.angular_velocity.y = float(data[8]) * radians(0.06957)
+        self._imu_msg.angular_velocity.z = float(data[9]) * radians(0.06957)
         q = quaternion_from_euler(roll,pitch,yaw)
         self._imu_msg.orientation.x = q[0]
         self._imu_msg.orientation.y = q[1]
         self._imu_msg.orientation.z = q[2]
         self._imu_msg.orientation.w = q[3]
-        self._imu_msg.header.stamp.secs = int(data[11])
-        self._imu_msg.header.stamp.nsecs = int(data[12]) * 1000 
-        self._seq += 1
+        self._imu_msg.header.stamp.secs = int(data[14])
+        self._imu_msg.header.stamp.nsecs = int(data[15]) * 1000 
         self._imu_msg.header.seq = self._seq
         self._imu_pub.publish(self._imu_msg)
         self._batteryLevels = np.roll(self._batteryLevels,-1)
-        self._batteryLevels[19] = int(data[10])
+        self._batteryLevels[19] = int(data[13])
         if self._batteryLevels[0] != 0:
             self._battery_pub.publish(np.median(self._batteryLevels))
         self._br.sendTransform((0.04, 0.0, 0.152),

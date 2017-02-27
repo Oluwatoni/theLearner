@@ -2,6 +2,16 @@
     <node pkg="the_learner" name="connect_controller" type="connect_controller.sh" output="screen" />
     <node pkg="joy" name="joy_node" type="joy_node"/>
     <node pkg="the_learner" name="sensor_publish_and_control" type="sensor_publish_and_control.py" args="/dev/rfcomm0" output="screen" />
+
+    <!--node pkg="imu_complementary_filter" type="complementary_filter_node"
+      name="complementary_filter_gain_node" output="screen">
+        <remap from="sensors/imu" to="imu/data_raw"/>
+        <param name="do_bias_estimation" value="true"/>
+        <param name="do_adaptive_gain" value="true"/>
+        <param name="use_mag" value="false"/>
+        <param name="gain_acc" value="0.01"/>
+        <param name="gain_mag" value="0.01"/> 
+    </node-->
     <node pkg="the_learner" name="tf_broadcaster" type="tf_broadcaster.py"/>
     <node pkg="the_learner" name="encoder_odom" type="encoder_odom.py"/>
     <node pkg="the_learner" name="state_estimator" type="state_estimator.py"/>
