@@ -79,13 +79,13 @@ class EKFThread(Thread):
                                             [0,0,0,0,0,0,10,0],
                                             [0,0,0,0,0,0,0,10]])
         self._motion_noise_covariance = np.matrix([[0.01,0,0,0,0,0,0,0], #process noise covariance matrix
-                                                   [0,0.01,0,0,0,0,0,0],
+                                                   [0,0.01,0,0,0,0,0,0], 
                                                    [0,0,0.1,0,0,0,0,0],
                                                    [0,0,0,0.001,0,0,0,0],
                                                    [0,0,0,0,0.001,0,0,0],
                                                    [0,0,0,0,0,0.001,0,0],
                                                    [0,0,0,0,0,0,0.001,0],
-                                                   [0,0,0,0,0,0,0,0.001]])
+                                                   [0,0,0,0,0,0,0,0.001]]) 
         self._I = np.matrix([[1,0,0,0,0,0,0,0], #state uncertainty covariance matrix
                              [0,1,0,0,0,0,0,0],
                              [0,0,1,0,0,0,0,0],
@@ -191,7 +191,7 @@ class EKFThread(Thread):
         self._sensor_mutex.acquire()
         (roll,pitch,yaw) = euler_from_quaternion([float(data.orientation.x), float(data.orientation.y), float(data.orientation.z), float(data.orientation.w)])
         ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
-
+       
         self._roll = roll
         self._pitch = pitch
         self._yaw = yaw

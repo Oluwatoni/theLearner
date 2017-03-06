@@ -88,8 +88,8 @@ class SensorUpdateThread(Thread):
         pose[:] = self._position
         self._position_mutex.release()
         (roll,pitch,yaw) = euler_from_quaternion([sensor_transform[1][0], sensor_transform[1][1], sensor_transform[1][2], sensor_transform[1][2]])
- 
-
+       
+         
         self._update_map.release()
 
 if __name__ == '__main__':
