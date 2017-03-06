@@ -160,7 +160,7 @@ class ArduinoMonitor (Thread):
         self._imu_msg.linear_acceleration.x = float(data[4])
         self._imu_msg.linear_acceleration.y = float(data[5])
         self._imu_msg.linear_acceleration.z = float(data[6])
-#       print self._imu_msg.linear_acceleration
+#       print float(data[1])
         self._imu_msg.angular_velocity.x = float(data[7]) * radians(0.06957) #gyro gain
         self._imu_msg.angular_velocity.y = float(data[8]) * radians(0.06957)
         self._imu_msg.angular_velocity.z = float(data[9]) * radians(0.06957)

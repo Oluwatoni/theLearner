@@ -6,7 +6,7 @@ from numpy import zeros
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, AccelWithCovarianceStamped
 from sensor_msgs.msg import Imu
-from std_msgs.msg import Int32, Time
+from std_msgs.msg import Float32, Int32, Time
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from math import tan, sin, cos, radians, pi
 from threading import Semaphore, Thread
@@ -34,6 +34,9 @@ class EKFThread(Thread):
         
         self._speed_available = False
         self._odom = Odometry()
+        self._roll = 0
+        self._pitch = 0
+        self._yaw = 0
         self._speed = 0.0
         self._dbw = 0.114 #distance between wheels   
         self._last_t = rospy.Time.now()    
@@ -60,7 +63,7 @@ class EKFThread(Thread):
         self._odom.twist.twist.angular.z = 0.0
 
         self._odom_publisher = rospy.Publisher('learner/odom', Odometry,queue_size = 1)
-#       rospy.Subscriber("sensors/accelerometer", AccelWithCovarianceStamped, self.updateAccelerometer)
+        self._test = rospy.Publisher('test', Float32,queue_size = 1)
         rospy.Subscriber("imu/data", Imu, self.updateImu)
         rospy.Subscriber("learner/raw_odom", Odometry, self.updateEncoderOdom)
         self._update_step_ready.acquire()
@@ -75,14 +78,14 @@ class EKFThread(Thread):
                                             [0,0,0,0,0,10,0,0],
                                             [0,0,0,0,0,0,10,0],
                                             [0,0,0,0,0,0,0,10]])
-        self._motion_noise_covariance = np.matrix([[0.001,0,0,0,0,0,0,0], #process noise covariance matrix
-                                                   [0,0.001,0,0,0,0,0,0],
-                                                   [0,0,0.001,0,0,0,0,0],
-                                                   [0,0,0,0.01,0,0,0,0],
-                                                   [0,0,0,0,0.01,0,0,0],
-                                                   [0,0,0,0,0,0.01,0,0],
-                                                   [0,0,0,0,0,0,0.01,0],
-                                                   [0,0,0,0,0,0,0,0.01]]) 
+        self._motion_noise_covariance = np.matrix([[0.01,0,0,0,0,0,0,0], #process noise covariance matrix
+                                                   [0,0.01,0,0,0,0,0,0],
+                                                   [0,0,0.1,0,0,0,0,0],
+                                                   [0,0,0,0.001,0,0,0,0],
+                                                   [0,0,0,0,0.001,0,0,0],
+                                                   [0,0,0,0,0,0.001,0,0],
+                                                   [0,0,0,0,0,0,0.001,0],
+                                                   [0,0,0,0,0,0,0,0.001]])
         self._I = np.matrix([[1,0,0,0,0,0,0,0], #state uncertainty covariance matrix
                              [0,1,0,0,0,0,0,0],
                              [0,0,1,0,0,0,0,0],
@@ -115,18 +118,21 @@ class EKFThread(Thread):
                                               [0,0,0,0,0,0,1,0],
                                               [0,0,0,0,0,0,0,1]])
                 self._state_estimate = state_transition * self._state_estimate
-                self._state_covariance = state_transition * self._state_covariance * (state_transition).getT() + self._motion_noise_covariance;
+#               print state_transition
+#               print self._state_covariance
+#               print (state_transition).getT()
+#               print self._motion_noise_covariance
+                self._state_covariance = state_transition * self._state_covariance * (state_transition).getT() + self._motion_noise_covariance
                 #update step
                 measurement_error = self._measurements - (self._sensor_jacobian * self._state_estimate)
                 S = self._sensor_jacobian * self._state_covariance * (self._sensor_jacobian).getT() + self._sensor_covariance
-                
                 K = self._state_covariance * (self._sensor_jacobian).getT() * (S).getI()
                 self._state_estimate = self._state_estimate + (K * measurement_error)
                 self._state_covariance = (self._I - K * self._sensor_jacobian) * self._state_covariance
 
                 self._odom.pose.pose.position.x = self._state_estimate[0]
                 self._odom.pose.pose.position.y = self._state_estimate[1]
-                (x,y,z,w) = quaternion_from_euler(0.0, 0.0, self._state_estimate[2])
+                (x,y,z,w) = quaternion_from_euler(self._roll, self._pitch, self._state_estimate[2], 'rxyz')
                 self._odom.pose.pose.orientation.x = x
                 self._odom.pose.pose.orientation.y = y
                 self._odom.pose.pose.orientation.z = z
@@ -135,16 +141,12 @@ class EKFThread(Thread):
                 self._odom.twist.twist.linear.y = self._state_estimate[4]
                 self._odom.twist.twist.angular.z = self._state_estimate[5]
                 self._odom_publisher.publish(self._odom)
-                self._br.sendTransform((0,0,0),
-                                 (0,0,0,1),
-                                 rospy.Time.now(),
-                                 "learner/odom",
-                                 "map")
+                self._test.publish(self._state_estimate[2])
                 self._br.sendTransform((self._state_estimate[0],self._state_estimate[1], 0.0),
-                                 quaternion_from_euler(0,0,(self._state_estimate[2])),
-                                 rospy.Time.now(),
-                                 "learner/base_link",
-                                 "learner/odom")
+                                     (x,y,z,w),
+                                     rospy.Time.now(),
+                                     "learner/base_link",
+                                     "learner/odom")
                 self._sensor_mutex.release()
 
     def close(self):
@@ -154,8 +156,6 @@ class EKFThread(Thread):
     #from http://www.varesano.net/blog/fabio/simple-gravity-compensation-9-dom-imus
     def gravity_compensate(self, q, acc):
         acc = np.array([[acc.x],[acc.y],[acc.z]])
-#       print "old"
-#       print acc
         acc /= 9.81
         q = np.array([[q.w],[q.x],[q.y],[q.z]])
         g = np.array([[0.0], [0.0], [0.0]])
@@ -164,21 +164,8 @@ class EKFThread(Thread):
         g[1] = 2 * (q[0] * q[1] + q[2] * q[3])
         g[2] = q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]
         acc -= g
-#       print (acc * 9.81)
         # compensate accelerometer readings with the expected direction of gravity
         return (acc * 9.81)
-
-    def updateAccelerometer(self, data):
-        self._sensor_mutex.acquire()
-        acc_x = -(data.accel.accel.linear.x) * cos(self._state_estimate[3]-pi/2) - data.accel.accel.linear.y * cos(self._state_estimate[3])
-        acc_y = -(data.accel.accel.linear.x) * sin(self._state_estimate[3]-pi/2) + data.accel.accel.linear.y * sin(self._state_estimate[3])
-        self._measurements = np.matrix([[acc_x],
-                                        [acc_y]])
-        self._sensor_jacobian = np.matrix([[0,0,0,0,0,0,1,0],
-                                           [0,0,0,0,0,0,0,1]])
-        self._sensor_covariance = np.matrix([[data.accel.covariance[0],0],
-                                             [0,data.accel.covariance[7]]])
-        self._update_step_ready.release()
  
     def updateEncoderOdom(self, data):
         self._sensor_mutex.acquire()
@@ -196,8 +183,8 @@ class EKFThread(Thread):
         self._sensor_covariance = np.matrix([[0.01,0,0,0,0],
                                              [0,0.01,0,0,0],
                                              [0,0,0.01,0,0],
-                                             [0,0,0,0.01,0],
-                                             [0,0,0,0,0.01]])
+                                             [0,0,0,0.001,0],
+                                             [0,0,0,0,0.001]])
         self._update_step_ready.release()
 
     def updateImu(self, data):
@@ -205,19 +192,18 @@ class EKFThread(Thread):
         (roll,pitch,yaw) = euler_from_quaternion([float(data.orientation.x), float(data.orientation.y), float(data.orientation.z), float(data.orientation.w)])
         ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
 
-        self._measurements = np.matrix([[yaw]])#,
-                                      # [data.angular_velocity.z],
-                                      # [ground_acc[0]],
-                                      # [ground_acc[1]]])
+        self._roll = roll
+        self._pitch = pitch
+        self._yaw = yaw
 
-        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0]])#,
-                                     #     [0,0,0,0,0,1,0,0],
-                                      #    [0,0,0,0,0,0,1,0],
-                                      #    [0,0,0,0,0,0,0,1]])
-        self._sensor_covariance = np.matrix([[data.orientation_covariance[8]]])#,0,0,0],
-                                         #   [0,data.angular_velocity_covariance[8],0,0],
-#                                            [0,0,data.linear_acceleration_covariance[0],0],
-#                                            [0,0,0,data.linear_acceleration_covariance[1]]])
+        yaw = -yaw #For some reason the IMU yaw is reversed
+        self._measurements = np.matrix([[yaw],
+                                       [data.angular_velocity.z]])
+
+        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0],
+                                           [0,0,0,0,0,1,0,0]])
+        self._sensor_covariance = np.matrix([[data.orientation_covariance[8],0],
+                                            [0,data.angular_velocity_covariance[8]]])
         self._update_step_ready.release()
 
 if __name__ == '__main__':

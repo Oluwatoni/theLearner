@@ -57,10 +57,11 @@ void sendAccData(){
 }
 
 void sendEncData(){
-  long start_timer;
+  long start_timer, cnt;
   start_timer = micros();
   msg ="e,";
-  msg.concat(readEncoderData());//X_axis
+  cnt = readEncoderData();
+  msg.concat(cnt);//X_axis
   msg.concat(",");
   sensor_clock.updateTime();
   msg = sensor_clock.appendTime(msg);

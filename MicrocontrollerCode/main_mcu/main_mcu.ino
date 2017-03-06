@@ -37,7 +37,7 @@ uint8_t filtered_distance[SONAR_NUM];
 byte start_filter = 0;
 int steering, throttle, stop_requested, time_counter = 5;
 
-IMU Imu(50);//frequency in Hz
+IMU Imu(75);//frequency in Hz
 Learner_car Car;
 Clock sensor_clock;
 
