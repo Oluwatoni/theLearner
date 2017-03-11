@@ -84,6 +84,7 @@ class ArduinoMonitor (Thread):
         return str(data)
     
     def processIncomingData(self, data):
+#        print data
         if data[0] == 'a':
             self.publish_accelerometer(data)
         elif data[0] == 'e':
@@ -117,6 +118,8 @@ class ArduinoMonitor (Thread):
             if newdata: 
                 line = newdata
                 newdata = ""
+            else:
+                line = ""
             line += self.readBuffer()
             sensor_data = line.split("\r\n")
             for string in sensor_data[0:-1]:
@@ -147,6 +150,8 @@ class ArduinoMonitor (Thread):
 
     def publish_encoder(self,data):
         self._enc_msg.speed = float(data[1])
+        if self._enc_msg.speed:
+            print data
         self._enc_msg.header.stamp.secs = int(data[2])
         self._enc_msg.header.stamp.nsecs = int(data[3]) * 1000 
         self._seq += 1
