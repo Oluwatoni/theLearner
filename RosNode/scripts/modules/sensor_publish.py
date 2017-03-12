@@ -150,8 +150,6 @@ class ArduinoMonitor (Thread):
 
     def publish_encoder(self,data):
         self._enc_msg.speed = float(data[1])
-        if self._enc_msg.speed:
-            print data
         self._enc_msg.header.stamp.secs = int(data[2])
         self._enc_msg.header.stamp.nsecs = int(data[3]) * 1000 
         self._seq += 1
