@@ -7,8 +7,6 @@ Panels:
         - /Global Options1
         - /Imu1
         - /Imu1/Axes properties1
-        - /Raw_Odometry1/Status1
-        - /TF1
       Splitter Ratio: 0.48888889
     Tree Height: 843
   - Class: rviz/Selection
@@ -149,16 +147,6 @@ Visualization Manager:
       Value: true
     - Angle Tolerance: 0.100000001
       Class: rviz/Odometry
-      Color: 255; 25; 0
-      Enabled: false
-      Keep: 100
-      Length: 0.100000001
-      Name: Raw_Odometry
-      Position Tolerance: 0.100000001
-      Topic: /learner/raw_odom
-      Value: false
-    - Angle Tolerance: 0.100000001
-      Class: rviz/Odometry
       Color: 255; 255; 0
       Enabled: false
       Keep: 100
@@ -254,24 +242,24 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.617857873
+      Distance: 1.53837657
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.00616191886
-        Y: 0.00189646264
-        Z: -0.00400475413
+        X: -0.00247014058
+        Y: 0.00453720801
+        Z: -0.000899220293
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.819796383
+      Pitch: 0.779796422
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.06562901
+      Yaw: 1.30745029
     Saved: ~
 Window Geometry:
   Displays:
@@ -289,5 +277,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1920
-  X: 1920
+  X: 0
   Y: 24

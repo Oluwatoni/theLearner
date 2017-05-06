@@ -17,7 +17,5 @@
     <node pkg="the_learner" name="tf_broadcaster" type="tf_broadcaster.py"/>
     <node pkg="tf" type="static_transform_publisher" name="odom_to_map"
       args="0 0  0 0 0 0  /map /learner/odom 10" />
-    <!---node pkg="tf" type="static_transform_publisher" name="odom_to_map"
-      args="0.067 0.076  0 0.8116 0 0  /learner/base_link /ultrasonic_0_link 100" /-->
     <node pkg="the_learner" name="state_estimator" type="state_estimator.py" output="screen" />
 </launch>

@@ -1,5 +1,0 @@
-<launch>
-    <node pkg="the_learner" name="map_server" type="map_server.py" output="screen">
-    <param name="mapping_sensors" value="hello1,hello2"/>
-    </node>
-</launch>

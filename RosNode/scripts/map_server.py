@@ -29,6 +29,7 @@ class SensorUpdateThread(Thread):
         self._map_mutex = Semaphore()
         self._position_mutex = Semaphore()
         self._t = tf.Transformer(True, rospy.Duration(20.0))
+        self._listener = tf.TransformListener()
 
         self._sensor_position = [0,0]
         self._sensor_orientation = 0
@@ -49,8 +50,7 @@ class SensorUpdateThread(Thread):
         origin.orientation.z = 0
         origin.orientation.w = 1
         self._map.info.origin = origin
-        self._map.data = ([-1] * 300) * 300 #np.ones((2,2),dtype=np.int8)#((self._map.info.width,self._map.info.height))
-#       self._map.data *= -1
+        self._map.data = ([-1] * 300) * 300
         ultrasonic_sensors = str(rospy.get_param("~mapping_sensors")).split(",")
 
         for sensor in ultrasonic_sensors:
@@ -82,14 +82,17 @@ class SensorUpdateThread(Thread):
         self._position_mutex.release()
 
     def ultrasonicCallback(self, data):
-        print data.header.frame_id
-        sensor_transform = self._t.lookupTransform(data.header.frame_id, self._base_link_id)
+        now = rospy.Time.now()
+        self._listener.waitForTransform(data.header.frame_id, self._base_link_id, now ,rospy.Duration(0.5))
+        (trans,rot) = self._listener.lookupTransform(data.header.frame_id, self._base_link_id, now)
+
         self._position_mutex.acquire()
-        pose[:] = self._position
+        pose = np.matrix([[0],[0],[0]])#self._position
         self._position_mutex.release()
-        (roll,pitch,yaw) = euler_from_quaternion([sensor_transform[1][0], sensor_transform[1][1], sensor_transform[1][2], sensor_transform[1][2]])
-       
-         
+        (roll,pitch,yaw) = euler_from_quaternion([rot[0],rot[1], rot[2], rot[3]])
+        print data.header.frame_id
+        print yaw
+
         self._update_map.release()
 
 if __name__ == '__main__':
