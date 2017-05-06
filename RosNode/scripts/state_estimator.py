@@ -128,10 +128,6 @@ class EKFThread(Thread):
                                               [0,0,0,0,0,0,1,0],
                                               [0,0,0,0,0,0,0,1]])
                 self._state_estimate = state_transition * self._state_estimate
-#               print state_transition
-#               print self._state_covariance
-#               print (state_transition).getT()
-#               print self._motion_noise_covariance
                 self._state_covariance = state_transition * self._state_covariance * (state_transition).getT() + self._motion_noise_covariance
                 #update step
                 measurement_error = self._measurements - (self._sensor_jacobian * self._state_estimate)
@@ -205,22 +201,24 @@ class EKFThread(Thread):
         ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
         
         #TODO fix this fam
-        #self._velocity_x += (self._acc_filter_factor * self._velocity_x) + ((1-self._acc_filter_factor) * ground_acc[1]*dt)
-        #print self._velocity_x
-        self._test.publish(self._velocity_x)
+        #the forward direction is the y negative the right direction is the positive x 
+        velocity = ground_acc[1] * dt + self._old_velocity
+        velocity = (1 - self._filter_factor) * velocity +  self._filter_factor * self._old_velocity
+        self._test.publish(velocity)
+        self._old_velocity = velocity
 
         self._roll = roll
         self._pitch = pitch
         self._yaw = yaw
 
         yaw = -yaw #For some reason the IMU yaw is reversed
-        self._measurements = np.matrix([[yaw],
-                                       [data.angular_velocity.z]])
+        self._measurements = np.matrix([[yaw]])#,
+                                       #[data.angular_velocity.z]])
 
-        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0],
-                                           [0,0,0,0,0,1,0,0]])
-        self._sensor_covariance = np.matrix([[data.orientation_covariance[8],0],
-                                            [0,data.angular_velocity_covariance[8]]]) 
+        self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0]])#,
+                                           #[0,0,0,0,0,1,0,0]])
+        self._sensor_covariance = np.matrix([[data.orientation_covariance[8]]])#,0],
+                                            #[0,data.angular_velocity_covariance[8]]])
         self._last_imu_time = rospy.Time.now()
         self._update_step_ready.release()
 

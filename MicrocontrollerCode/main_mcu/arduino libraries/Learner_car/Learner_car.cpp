@@ -3,7 +3,7 @@
 
 Learner_car::Learner_car()
 {
-	
+
 }
 
 void Learner_car::Setup()
@@ -79,4 +79,9 @@ void Learner_car::Instruct(int dir, int power)//direction (-100 to 100) power 0 
 
     
   steering.write(map(dir, -30, 30, 85, 65));
+}
+
+char Learner_car::getDirection()
+{
+  return direction;
 }

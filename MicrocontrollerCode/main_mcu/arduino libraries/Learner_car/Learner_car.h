@@ -14,7 +14,7 @@ class Learner_car
 {
 private:
 	Servo steering;
-	bool direction;
+	char direction;
 	int battery_level;
 public:
 	Learner_car();
@@ -25,6 +25,7 @@ public:
 	void StopMove();
 	void SoftStop();
 	void Instruct(int dir, int power);//direction (-100 to 100) power 0 to 100
+    char getDirection();
 };
 
 #endif
