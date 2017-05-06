@@ -6,8 +6,6 @@
     <node pkg="nodelet" type="nodelet" name="imu_manager" 
         args="manager" output="screen" />
 
-    #### Complementary filter
-
     <node pkg="imu_complementary_filter" type="complementary_filter_node"
       name="complementary_filter_gain_node" output="screen">
         <param name="do_bias_estimation" value="true"/>
@@ -17,7 +15,6 @@
     </node>
 
     <node pkg="the_learner" name="tf_broadcaster" type="tf_broadcaster.py"/>
-    <node pkg="the_learner" name="encoder_odom" type="encoder_odom.py" output="screen" />
     <node pkg="tf" type="static_transform_publisher" name="odom_to_map"
       args="0 0  0 0 0 0  /map /learner/odom 10" />
     <!---node pkg="tf" type="static_transform_publisher" name="odom_to_map"
