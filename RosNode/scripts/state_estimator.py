@@ -71,6 +71,9 @@ class EKFThread(Thread):
         self._odom.twist.twist.angular.y = 0.0
         self._odom.twist.twist.angular.z = 0.0
 
+        self._old_velocity = 0.0
+        self._filter_factor = 0.7
+
         self._odom_publisher = rospy.Publisher('learner/odom', Odometry,queue_size = 1)
         self._test = rospy.Publisher('test', Float32,queue_size = 1)
         rospy.Subscriber("imu/data", Imu, self.updateImu)
@@ -146,9 +149,12 @@ class EKFThread(Thread):
                 self._odom.twist.twist.linear.x = self._state_estimate[3] 
                 self._odom.twist.twist.linear.y = self._state_estimate[4]
                 self._odom.twist.twist.angular.z = self._state_estimate[5]
+                if ((abs(self._state_estimate[3]) + abs(self._state_estimate[4]) < 0.05)):
+                    self._old_velocity = 0
+
                 self._odom_publisher.publish(self._odom)
                 self._br.sendTransform((self._state_estimate[0],self._state_estimate[1], 0.0),
-                                     (x,y,z,w),
+                                     (0,0,0,1),#(x,y,z,w),
                                      rospy.Time.now(),
                                      "learner/base_link",
                                      "learner/odom")
@@ -182,7 +188,6 @@ class EKFThread(Thread):
         vy = speed * sin(self._state_estimate[2]) 
         self._command_mutex.release()
         self._odom.header.stamp = rospy.Time.now()
-
         self._measurements = np.matrix([[vx],
                                         [vy],
                                         [omega]])
@@ -201,7 +206,7 @@ class EKFThread(Thread):
         ground_acc = np.array(self.gravity_compensate(data.orientation, data.linear_acceleration))
         
         #TODO fix this fam
-        #the forward direction is the y negative the right direction is the positive x 
+        #the forward direction is the y negative the right direction is the positive x        
         velocity = ground_acc[1] * dt + self._old_velocity
         velocity = (1 - self._filter_factor) * velocity +  self._filter_factor * self._old_velocity
         self._test.publish(velocity)
@@ -218,7 +223,7 @@ class EKFThread(Thread):
         self._sensor_jacobian = np.matrix([[0,0,1,0,0,0,0,0]])#,
                                            #[0,0,0,0,0,1,0,0]])
         self._sensor_covariance = np.matrix([[data.orientation_covariance[8]]])#,0],
-                                            #[0,data.angular_velocity_covariance[8]]])
+                                            #[0,data.angular_velocity_covariance[8]]]) 
         self._last_imu_time = rospy.Time.now()
         self._update_step_ready.release()
 
