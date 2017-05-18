@@ -18,4 +18,8 @@
     <node pkg="tf" type="static_transform_publisher" name="odom_to_map"
       args="0 0  0 0 0 0  /map /learner/odom 10" />
     <node pkg="the_learner" name="state_estimator" type="state_estimator.py" output="screen" />
+
+    <node pkg="the_learner" name="map_server" type="map_server.py" output="screen">
+        <param name="mapping_sensors" value="/sensors/ultrasonic_0,/sensors/ultrasonic_1,/sensors/ultrasonic_2,/sensors/ultrasonic_3,/sensors/ultrasonic_4,/sensors/ultrasonic_5,/sensors/ultrasonic_6"/>
+    </node>
 </launch>
