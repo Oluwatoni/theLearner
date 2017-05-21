@@ -28,6 +28,7 @@
 #define SENSOR_WAVE_DELAY 20
 #define WHEEL_CIRCUM 0.187
 #define ENCODER_ADDRESS 0x07
+#define PRINT_DATA
 
 
 byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored

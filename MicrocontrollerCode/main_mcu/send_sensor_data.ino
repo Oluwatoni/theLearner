@@ -66,7 +66,9 @@ void sendEncData(){
   sensor_clock.updateTime();
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
+#ifdef PRINT_DATA
   Serial.println(msg);
+#endif
 }
 
 void sendUltrasonicData1(){
@@ -83,7 +85,9 @@ void sendUltrasonicData1(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
+#ifdef PRINT_DATA
   Serial.println(msg);
+#endif
 }
 
 void sendUltrasonicData2(){
@@ -98,7 +102,9 @@ void sendUltrasonicData2(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
+#ifdef PRINT_DATA
   Serial.println(msg);
+#endif
 }
 
 void sendUltrasonicData3(){
@@ -115,5 +121,7 @@ void sendUltrasonicData3(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
+#ifdef PRINT_DATA
   Serial.println(msg);
+#endif
 }

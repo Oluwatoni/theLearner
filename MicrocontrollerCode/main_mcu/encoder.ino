@@ -13,10 +13,12 @@ int readEncoderData(){
     i++;
   }
   //dt = ((uint16_t) c[2] + (c[1] << 8))/10000000.0;//in s
-  if (Car.getDirection() >= 0)
+  if (Car.getDirection() == 1)
     counts = c[0];
-  else
+  else if(Car.getDirection() == -1)
     counts = c[0] * -1;
+  else
+    counts = 0;
   return counts;
 }
 

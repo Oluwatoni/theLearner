@@ -24,7 +24,8 @@ int Learner_car::GetBatteryLevel()
 
 void Learner_car::Forward(int speedy)
 {
-  direction = 1;
+  if (speedy > 0)
+    direction = 1;
   analogWrite(REVERSE_PIN, 0);
   analogWrite(FORWARD_PIN, speedy);
 }
@@ -32,7 +33,8 @@ void Learner_car::Forward(int speedy)
 //Add reverse functions
 void Learner_car::Reverse(int speedy)
 {
-  direction = -1;
+  if (speedy > 0)
+    direction = -1;
   analogWrite(FORWARD_PIN, 0);
   analogWrite(REVERSE_PIN, speedy);
 }
