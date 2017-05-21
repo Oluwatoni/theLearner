@@ -52,23 +52,15 @@ class ArduinoMonitor (Thread):
         self._battery_pub = rospy.Publisher('sensors/battery_level', Int16, queue_size = 1)
         self._imu_pub = rospy.Publisher('imu/data_raw', Imu, queue_size = 1)
         self._imu_msg.header.frame_id = 'imu_link'
-        self._imu_msg.orientation_covariance = [ 0.0025 , 0 , 0,
-                                                 0, 0.0025, 0,
-                                                 0, 0, 0.0025 ]
+        self._imu_msg.orientation_covariance = [ 0.00025 , 0 , 0,
+                                                 0, 0.00025, 0,
+                                                 0, 0, 0.00025 ]
         self._imu_msg.angular_velocity_covariance = [ 0.02, 0 , 0,
                                                       0 , 0.02, 0,
                                                       0 , 0 , 0.02 ]
         self._imu_msg.linear_acceleration_covariance = [ 0.04 , 0 , 0,
                                                          0 , 0.04, 0,
                                                          0 , 0 , 0.04 ]
-        self._acc_pub = rospy.Publisher('sensors/accelerometer', AccelWithCovarianceStamped,queue_size = 1)
-        self._acc_msg.header.frame_id = 'acc_link'
-        self._acc_msg.accel.covariance = [0.02, 0, 0, 0, 0, 0,
-                                          0, 0.02, 0, 0, 0, 0,
-                                          0, 0, 0.02, 0, 0, 0,
-                                          0, 0, 0, 0, 0, 0,
-                                          0, 0, 0, 0, 0, 0,
-                                          0, 0, 0, 0, 0, 0]
         self._enc_pub = rospy.Publisher('sensors/encoder', RawSpeedEncoder, queue_size = 1)
         self._old_command = ""
 
@@ -85,9 +77,7 @@ class ArduinoMonitor (Thread):
     
     def processIncomingData(self, data):
 #        print data
-        if data[0] == 'a':
-            self.publish_accelerometer(data)
-        elif data[0] == 'e':
+        if data[0] == 'e':
             self.publish_encoder(data)
         elif data[0] == 'i':
             self.publish_imu(data)
@@ -133,20 +123,6 @@ class ArduinoMonitor (Thread):
                         self.processIncomingData(readings)
             newdata = sensor_data[-1]
         self._serial_port.close()
-
-    def publish_accelerometer(self,data):
-        self._acc_msg.accel.accel.linear.x = (float(data[1]) - 577) * 0.0817 
-        self._acc_msg.accel.accel.linear.y = (float(data[2]) - 560) * 0.0853 
-        self._acc_msg.header.stamp.secs = int(data[3])
-        self._acc_msg.header.stamp.nsecs = int(data[4]) * 1000
-        self._seq += 1
-        self._acc_msg.header.seq = self._seq
-        self._acc_pub.publish(self._acc_msg)
-        self._br.sendTransform((0.04, 0.0, 0.072),
-                         quaternion_from_euler((-pi/2),0,0),
-                         rospy.Time.now(),
-                         "acc_link",
-                         "learner/base_link")
 
     def publish_encoder(self,data):
         self._enc_msg.speed = float(data[1])

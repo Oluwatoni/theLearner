@@ -41,19 +41,9 @@ void sendImuData(){
   msg.concat(",");
   msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
+#ifdef PRINT_DATA
   Serial.println(msg);
-}
-
-void sendAccData(){
-  msg ="a,";
-  msg.concat(analogRead(A0));//X_axis
-  msg.concat(",");
-  msg.concat(analogRead(A1));//Y_axis
-  msg.concat(",");
-  sensor_clock.updateTime();
-  msg = sensor_clock.appendTime(msg);
-  msg = appendChecksum(msg);
-  Serial.println(msg);
+#endif
 }
 
 void sendEncData(){
