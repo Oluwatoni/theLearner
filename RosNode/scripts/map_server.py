@@ -132,13 +132,13 @@ class SensorUpdateThread(Thread):
         self._position = np.matrix([[data.pose.pose.position.x],
                                     [data.pose.pose.position.y],
                                     [yaw]])
+        self._position_mutex.release()
 
         if sqrt(((self._position[0] - self._old_position[0])**2) + ((self._position[1] - self._old_position[1])**2)) >=  self._map.info.resolution:
-            self.fillCells(0,0, (2*pi), 0, self._car_radius)
+            self.fillCells(self._position[0],self._position[1], (2*pi), 0, self._car_radius)
 
         #the robot is represented by a circle
         self._old_position = self._position
-        self._position_mutex.release()
 
     def ultrasonicCallback(self, data):
         now = rospy.Time(0)
@@ -150,7 +150,7 @@ class SensorUpdateThread(Thread):
         self._position_mutex.release()
         (roll,pitch,yaw) = euler_from_quaternion([rot[0],rot[1], rot[2], rot[3]])
 
-        self.fillCells(trans[0], trans[1], data.field_of_view, yaw, 2.5)#data.range)
+        self.fillCells(trans[0], trans[1], data.field_of_view, yaw, data.range)
 
 if __name__ == '__main__':
     main()
