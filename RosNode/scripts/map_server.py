@@ -72,7 +72,9 @@ class SensorUpdateThread(Thread):
         self._update_map.release()
 
     def run(self):
+      #  self.fillCells(1,0, (pi/6), 0*(pi/6), 0.5)
         self.fillCells(0,0, (2*pi), 0, self._car_radius)
+        self._map.data[280 * self._map.info.width + 150] = 127 
         while self._run:
             self._update_map.acquire()
             self._map_publisher.publish(self._map)
@@ -81,45 +83,89 @@ class SensorUpdateThread(Thread):
 
     def close(self):
         self._run = False
+    
+    def odds(self,x): 
+        return ((x / (1.0001-x), x / (1-x))[x == 1.0])
+
+    def robotUpdateCellProb(self, m_occ, cell):
+        if m_occ == None:
+            self._map.data[cell[1] * self._map.info.width + cell[0]] = max(1,min(99,((0)/(1+(0))) * 100))
+        else:
+            try:
+                last_p_occ = self._map.data[cell[1] * self._map.info.width + cell[0]] / 100.0
+            except IndexError:
+                return
+            occ = self.odds(m_occ) * self.odds(last_p_occ)
+            self._map.data[cell[1] * self._map.info.width + cell[0]] = max(1,min(99,((occ)/(1+(occ))) * 100)) 
+
+    def findBoundary(self, x_origin, y_origin, r, angle):
+        bound_y = int(y_origin - r*cos(angle))
+        bound_x = int(x_origin + r*sin(angle))
+        return (bound_x, bound_y)
+
+    def drawLine(self, origin, end_point, list_of_cells):
+        #switch to a modified bresemhams algorithm http://playtechs.blogspot.com/2007/03/raytracing-on-grid.html
+        x = origin[0]
+        y = origin[1]
+        x_p = end_point[0]
+        y_p = end_point[1]
+        dx = abs(x_p - x)
+        dy = abs(y_p - y)
+        n = 1 + dx + dy
+        x_inc = (1, -1) [x_p > x] 
+        y_inc = (1, -1) [y_p > y] 
+        error = dx - dy
+        dx *= 2
+        dy *= 2
+        line = [(x,y)]
+        while (n > 0):
+            if (error > 0):
+                x += x_inc
+                error -= dy
+            else:
+                y += y_inc
+                error += dx
+            n -= 1
+            list_of_cells.append((x,y))
 
     def fillCells(self, center_x, center_y, fov, yaw, radius):
-        #ray tracing from 0 to 359 degrees
-        fov /= 2.0 #TODO to make life easier
-        ray_angle = (-0.0149) * radius + 0.039
-        neg_bound = -int(fov/ ray_angle)
-        pos_bound = -neg_bound
+        fov /= 2.0
+        ray_angle = atan(self._map.info.resolution / 6.0*radius)
+        yaw -= (pi/2.0)
+        neg_bound = (-fov + yaw)
+        pos_bound = (fov + yaw)
         list_of_used_cells = []
+        list_of_bound_cells = set([])
+        r = radius / self._map.info.resolution
 
         #set the cell at the source of the ray to not occupied
-        x = int(center_x/self._map.info.resolution + self._map.info.width/2)
-        y = int(center_y/self._map.info.resolution + self._map.info.height/2)
+        x_origin = int(center_x/self._map.info.resolution + self._map.info.width/2)
+        y_origin = int(center_y/self._map.info.resolution + self._map.info.height/2)
 
-        def odds(x): return ((x / (1.0001-x), x / (1-x))[x == 1.0])
+        #TODO TODO TODO OPTIMIZE change from list to dictionary
+        #generate the set of map cells to update
+        bound_angles = []
+        x = neg_bound
+        while x < pos_bound:
+            bound_angles.append(x)
+            x += ray_angle
 
-        self._update_map.acquire()
-        #TODO switch to bresemhams algorithm?
-        for theta in range(neg_bound, pos_bound,1):
-            for r in range(int((radius*(1 + self._scan_tolerance))/self._map.info.resolution), 0, -1):
-                #center point of the boundary of the scan
-                x_p = int(x + r*cos(yaw + theta*ray_angle))
-                y_p = int(y + r*sin(yaw + theta*ray_angle))
+        list_of_bound_cells = set(list(map(lambda x: self.findBoundary(x_origin, y_origin, r, x), bound_angles)))
+ 
+        map(lambda x: self.drawLine((x_origin, y_origin),x, list_of_used_cells), list_of_bound_cells)
+        list_of_used_cells = set( list_of_used_cells )
 
-                if not((x_p,y_p) in list_of_used_cells):
-                    if (fov == pi):
-                        #TODO add a tolerance region around this
-                        self._map.data[y_p * self._map.info.width + x_p] = 0
-                    else:
-                        #TODO handle the 2.5
-                        last_p_occ = self._map.data[y_p * self._map.info.width + x_p] / 100.0
-                        m_occ = self.logOddsUpdate(r * self._map.info.resolution, theta*ray_angle, radius, 2.5, fov)
-                        occ = odds(m_occ) * odds(last_p_occ) * 1
-                        #print "probs: " + str(m_occ) + " " + str(last_p_occ) + " " + str((occ)/(1+(occ)))
-                        self._map.data[y_p * self._map.info.width + x_p] = max(1,min(99,((occ)/(1+(occ))) * 100))
-                    list_of_used_cells.append((x_p,y_p))
+        #TODO TODO TODO OPTIMIZE
+        #for each of the cells update the probabilty        
+        self._update_map.acquire() 
+        if (fov == pi):
+            map(lambda x: self.robotUpdateCellProb(None, x), list_of_used_cells)
+        else:
+            map(lambda x: self.robotUpdateCellProb(self.inverseSensorModel(x, radius, 2.5, fov,(x_origin, y_origin)), x), list_of_used_cells)
         self._update_map.release()
 
-    def logOddsUpdate(self, r, theta, scan, max_scan, fov):
-        theta = abs(theta)
+    def inverseSensorModel(self, cell, scan, max_scan, fov, origin):
+        r = sqrt((cell[0] - origin[0])**2 + (cell[1] - origin[1])**2) * self._map.info.resolution
         if (r > (scan * (1 - self._scan_tolerance))):
             p_occ = 0.75#(((max_scan - r)/max_scan) + ((fov-theta)/fov)) * self._max_occupancy / 2.0
         else:
@@ -142,15 +188,11 @@ class SensorUpdateThread(Thread):
 
     def ultrasonicCallback(self, data):
         now = rospy.Time(0)
-        self._listener.waitForTransform(self._map.header.frame_id, data.header.frame_id, now ,rospy.Duration(0.25))
+        self._listener.waitForTransform(self._map.header.frame_id, data.header.frame_id, now ,rospy.Duration(0.1))
         (trans,rot) = self._listener.lookupTransform(self._map.header.frame_id, data.header.frame_id, now)
-
-        self._position_mutex.acquire()
-        pose = np.matrix([[0],[0],[0]])#self._position
-        self._position_mutex.release()
         (roll,pitch,yaw) = euler_from_quaternion([rot[0],rot[1], rot[2], rot[3]])
 
-        self.fillCells(trans[0], trans[1], data.field_of_view, yaw, data.range)
+        self.fillCells(trans[0], trans[1], data.field_of_view, yaw, 2.5)#data.range)
 
 if __name__ == '__main__':
     main()

@@ -63,6 +63,7 @@ class ArduinoMonitor (Thread):
                                                          0 , 0 , 0.04 ]
         self._enc_pub = rospy.Publisher('sensors/encoder', RawSpeedEncoder, queue_size = 1)
         self._old_command = ""
+        self._test1 = rospy.Publisher('test1', Float32,queue_size = 1)
 
     def readBuffer(self):
         data = self._serial_port.read()

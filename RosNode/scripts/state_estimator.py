@@ -144,7 +144,7 @@ class EKFThread(Thread):
                 if self._EKF_counter <= 5:
                     self._state_estimate[2] = self._yaw
                 temp = float(self._state_estimate[2])
-                (x,y,z,w) =  quaternion_from_euler(self._roll, self._pitch, temp, 'rxyz')
+                (x,y,z,w) = quaternion_from_euler(self._roll, self._pitch, temp, 'rxyz')
                 self._odom.pose.pose.orientation.x = x
                 self._odom.pose.pose.orientation.y = y
                 self._odom.pose.pose.orientation.z = z
