@@ -185,6 +185,7 @@ class EKFThread(Thread):
     def updateEncoderOdom(self, data):
         self._sensor_mutex.acquire()
         dt = (rospy.Time.now() - self._last_encoder_time).to_sec()
+        #TODO fix the encoders naming its silly
         speed = ((data.speed / 40.0) * 0.187) / dt
         self._last_encoder_time = rospy.Time.now()    
         omega = (speed * tan(-self._steering)) / 0.114 

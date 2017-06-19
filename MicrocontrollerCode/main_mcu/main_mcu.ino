@@ -12,7 +12,11 @@
 #include <Servo.h>
 #include <avr/interrupt.h>
 #include <Cristians_clock.h>
-#include <IMU.h>
+#include <IMU.h>//TODO remove
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <PID_v1.h>
+
 #include <Learner_car.h>
 
 #define UART_RX_HARDWARE_ENABLE
@@ -27,8 +31,12 @@
 #define ULTRASONIC_DELAY 18
 #define SENSOR_WAVE_DELAY 20
 #define WHEEL_CIRCUM 0.187
+#define TICKS_PER_REVOLUTION 40.0
 #define ENCODER_ADDRESS 0x07
 #define PRINT_DATA
+#define KP 800.0
+#define KI 30.0
+#define KD 0.0
 
 
 byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored
@@ -36,14 +44,16 @@ uint8_t unfiltered_ultrasonic_data[SONAR_NUM][FILTER_ARRAY_SIZE];
 uint8_t last_measurement[SONAR_NUM];
 uint8_t filtered_distance[SONAR_NUM];
 byte start_filter = 0;
-int steering, throttle, stop_requested, time_counter = 5;
+int time_counter = 5;
+double Input = 0, Output = 0, Setpoint = 0;
 
 IMU Imu(75);//frequency in Hz
 Learner_car Car;
 Clock sensor_clock;
+PID myPID(&Input, &Output, &Setpoint, KP, KI, KD, DIRECT);
 
 // Sensor object array.
-NewPing sonar[SONAR_NUM - 4] ={
+NewPing sonar[SONAR_NUM - 4] = {
   NewPing(7, 7, MAX_DISTANCE), //ultra 5 // Each sensor's trigger pin, echo pin, and max distance to ping.
   NewPing(A2, A2, MAX_DISTANCE),//ultra 7
   NewPing(2, 2, MAX_DISTANCE)//ultra 6
@@ -53,15 +63,17 @@ char input_string[40];         // a string to hold incoming data
 uint8_t input_string_index = 0;
 boolean input_string_complete = false;  // whether the string is complete
 
-void setup(){
+void setup() {
   Wire.begin();
   Imu.Setup();
   Car.Setup();
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   Serial.begin(115200);
+  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(-255, 255);
   sei();
-  for (int i = 0; i < SONAR_NUM; i++){
+  for (int i = 0; i < SONAR_NUM; i++) {
     filtered_distance[i] = 0;
     raw_distance[i] = 0;
     for (int j = 0; j < FILTER_ARRAY_SIZE; j++)
@@ -70,12 +82,13 @@ void setup(){
 }
 unsigned long temp = 0, now  = 0;
 
-void loop(){
-  if (time_counter == 5){
+void loop() {
+  if (time_counter == 5) {
     time_counter = 0;
     sensor_clock.requestTime();
   }
   sendImuData();
+  sendEncData();
   delay(5);
   sendUltrasonicData1();
   sendImuData();
@@ -89,8 +102,9 @@ void loop(){
   time_counter++;
 }
 
+int16_t steering = 0;
 //handles RC msgs
-void extractData(char * msg, uint8_t msg_size){
+void extractData(char * msg, uint8_t msg_size) {
   int16_t state = 0, temp_steering, temp_throttle, temp_stop, checksum_size = 0, checksum;
   String raw_steering = "", raw_throttle = "", raw_stop = "", raw_checksum = "";
   char temp[15];
@@ -139,10 +153,9 @@ void extractData(char * msg, uint8_t msg_size){
     Serial.println(raw_stop);
 #endif
 
-    temp_steering = raw_steering.toInt();
-    temp_throttle = raw_throttle.toInt();
+    steering = raw_steering.toInt();
+    Setpoint = (float)(raw_throttle.toInt() / 110.39);
     temp_stop = raw_stop.toInt();
-    Car.Instruct(temp_steering, temp_throttle);
   }
 #ifdef DEBUG
   else
@@ -159,7 +172,7 @@ void extractData(char * msg, uint8_t msg_size){
 }
 
 //using Cristian's algorithm to update the arduino's time
-void recieveTime(char * msg, uint8_t msg_size){
+void recieveTime(char * msg, uint8_t msg_size) {
   uint8_t state = 0, checksum_size = 0, checksum;
   uint32_t int_second, int_microsecond;
   String raw_second = "", raw_microsecond = "", raw_checksum = "";
@@ -201,14 +214,14 @@ void recieveTime(char * msg, uint8_t msg_size){
     Serial.println(raw_second);
     Serial.println(raw_microsecond);
 #endif
-  int_second = raw_second.toInt();
-  int_microsecond = raw_microsecond.toInt();
-  
+    int_second = raw_second.toInt();
+    int_microsecond = raw_microsecond.toInt();
+
     int_microsecond = int_microsecond;
     if (int_microsecond > 1000000)
     {
       int_microsecond %= 1000000;
-      int_second+= int_microsecond /1000000;
+      int_second += int_microsecond / 1000000;
     }
     sensor_clock.setTime(int_second, int_microsecond);
   }
@@ -229,7 +242,7 @@ void recieveTime(char * msg, uint8_t msg_size){
 
 //Handle incoming commands
 
-ISR(USART_RX_vect){
+ISR(USART_RX_vect) {
   cli();
   char temp = UDR0;
   if (temp == '\n')

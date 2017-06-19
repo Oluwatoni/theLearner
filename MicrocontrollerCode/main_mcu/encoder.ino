@@ -19,6 +19,36 @@ int readEncoderData(){
     counts = c[0] * -1;
   else
     counts = 0;
+  
   return counts;
+}
+
+void speed_control(int encoder_ticks){
+  static long prev_time = 0;
+  float dt = 0.0;
+  static double raw_vehicle_speed = 0.0, filtered_vehicle_speed = 0.0, filter_factor = 0.4, old_speed = 0;
+  String msg;
+
+  dt = (millis() - prev_time)/1000.0;
+  raw_vehicle_speed = ((encoder_ticks / TICKS_PER_REVOLUTION) * WHEEL_CIRCUM) / dt;
+  filtered_vehicle_speed = (1-filter_factor) * raw_vehicle_speed + filtered_vehicle_speed * filter_factor;
+  //rename the PID variables
+  Input = filtered_vehicle_speed;
+  myPID.Compute();
+  prev_time = millis();
+
+  Car.Instruct(steering, Output);
+
+  msg ="z,";
+  msg.concat(Setpoint);
+  msg.concat(",");
+  msg.concat(filtered_vehicle_speed);
+  msg.concat(",");
+  sensor_clock.updateTime();
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
+#ifdef PRINT_DATA
+  Serial.println(msg);
+#endif
 }
 

@@ -39,7 +39,7 @@ class SensorUpdateThread(Thread):
         self._map = OccupancyGrid()
         self._map.header.frame_id = "/map"
         self._map.info.map_load_time = rospy.Time.now()
-        self._map.info.resolution = 0.02
+        self._map.info.resolution = 0.05
         self._map.info.width = 300
         self._map.info.height = 300
         origin.position.x = (self._map.info.width * self._map.info.resolution) /-2.0
@@ -129,6 +129,8 @@ class SensorUpdateThread(Thread):
             list_of_cells.append((x,y))
 
     def fillCells(self, center_x, center_y, fov, yaw, radius):
+        if (radius == 0):
+            radius = 2.5
         fov /= 2.0
         ray_angle = atan(self._map.info.resolution / 6.0*radius)
         yaw -= (pi/2.0)
@@ -137,7 +139,7 @@ class SensorUpdateThread(Thread):
         list_of_used_cells = []
         list_of_bound_cells = set([])
         r = radius / self._map.info.resolution
-
+        
         #set the cell at the source of the ray to not occupied
         x_origin = int(center_x/self._map.info.resolution + self._map.info.width/2)
         y_origin = int(center_y/self._map.info.resolution + self._map.info.height/2)
@@ -166,7 +168,9 @@ class SensorUpdateThread(Thread):
 
     def inverseSensorModel(self, cell, scan, max_scan, fov, origin):
         r = sqrt((cell[0] - origin[0])**2 + (cell[1] - origin[1])**2) * self._map.info.resolution
-        if (r > (scan * (1 - self._scan_tolerance))):
+        if (r > 1.6):
+            p_occ = 0.5
+        elif (r > (scan * (1 - self._scan_tolerance))):
             p_occ = 0.75#(((max_scan - r)/max_scan) + ((fov-theta)/fov)) * self._max_occupancy / 2.0
         else:
             p_occ = 0.25#(1 - (((max_scan - r)/max_scan) + ((fov-theta)/fov)) / 2.0)
@@ -192,7 +196,7 @@ class SensorUpdateThread(Thread):
         (trans,rot) = self._listener.lookupTransform(self._map.header.frame_id, data.header.frame_id, now)
         (roll,pitch,yaw) = euler_from_quaternion([rot[0],rot[1], rot[2], rot[3]])
 
-        self.fillCells(trans[0], trans[1], data.field_of_view, yaw, 2.5)#data.range)
+        self.fillCells(trans[0], trans[1], data.field_of_view, yaw, data.range)
 
 if __name__ == '__main__':
     main()

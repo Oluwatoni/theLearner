@@ -59,6 +59,8 @@ void sendEncData(){
 #ifdef PRINT_DATA
   Serial.println(msg);
 #endif
+
+  speed_control(cnt);
 }
 
 void sendUltrasonicData1(){

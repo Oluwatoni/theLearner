@@ -63,6 +63,7 @@ class ArduinoMonitor (Thread):
                                                          0 , 0 , 0.04 ]
         self._enc_pub = rospy.Publisher('sensors/encoder', RawSpeedEncoder, queue_size = 1)
         self._old_command = ""
+        self._test = rospy.Publisher('test', Float32,queue_size = 1)
         self._test1 = rospy.Publisher('test1', Float32,queue_size = 1)
 
     def readBuffer(self):
@@ -96,6 +97,10 @@ class ArduinoMonitor (Thread):
             order_w = [6,2]
             rec_time =  [data[3], data[4]]
             self.publish_ultrasonic(order_w, rec_time,data)
+        elif data[0] == 'z':
+            print data
+            self._test.publish(float(data[1]))
+            self._test1.publish(float(data[2]))
         else:
             print "Invalid"
             print data[0]
@@ -140,7 +145,6 @@ class ArduinoMonitor (Thread):
         self._imu_msg.linear_acceleration.x = float(data[4])
         self._imu_msg.linear_acceleration.y = float(data[5])
         self._imu_msg.linear_acceleration.z = float(data[6])
-#       print float(data[1]) 
         self._imu_msg.angular_velocity.x = float(data[7]) * radians(0.06957) #gyro gain
         self._imu_msg.angular_velocity.y = float(data[8]) * radians(0.06957)
         self._imu_msg.angular_velocity.z = float(data[9]) * radians(0.06957)

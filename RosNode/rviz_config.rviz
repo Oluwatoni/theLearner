@@ -121,7 +121,7 @@ Visualization Manager:
           Topic: /sensors/ultrasonic_6
           Unreliable: false
           Value: true
-      Enabled: false
+      Enabled: true
       Name: Range Group
     - Acceleration properties:
         Acc. vector alpha: 1
