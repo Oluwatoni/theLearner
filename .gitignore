@@ -48,3 +48,11 @@ Temporary Items
 
 #temp files
 *.py~
+
+#Visual studio
+*.o
+*.lss
+*.map
+*.elf
+*.srec
+*.atsuo

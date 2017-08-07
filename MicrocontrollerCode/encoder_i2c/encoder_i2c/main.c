@@ -65,14 +65,15 @@ int main(void){
 }
 ISR(PCINT0_vect){
 	cli();
-	pin_value = PINB & (1 << PB4);
-	activate_timer_interrupt();
-	deactivate_PB4_interrupt();
+	//pin_value = PINB & (1 << PB4);
+  pulses.pulse_count++;
+	//activate_timer_interrupt();
+	//deactivate_PB4_interrupt();
 	sei();
 }
 
 ISR(TIM1_OVF_vect){
-	//F_CPU/(Prescalecar = 8)*(256-Timer preset - 156) = no of interrupts per second
+	//F_CPU/((Prescalecar = 8)*(256-Timer preset = 156)) = no of interrupts per second
 	TCNT1 = 156;
 	cli();
 	pulses.dt++;
