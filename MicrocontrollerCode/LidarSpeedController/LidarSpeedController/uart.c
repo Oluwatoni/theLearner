@@ -53,6 +53,8 @@ void PrintCharArray(char array[], uint8_t size, uint8_t newline){
     UART_Transmit('\r');
     UART_Transmit('\n');
   }
+  //waits for the data to finish being transmitted
+  while(!(UCSR0A & ((1 << TXC0)))){}
 }
 
 uint16_t GetChecksum(char* data_frame){

@@ -47,16 +47,29 @@ void PrintSpeed(){
 
 void SendLidarFrame(){
   //Negotiate control of the Bluetooth TX
+
   uint32_t count = 0;
   while((PIND & (1 << PIND4)) && (count++ < LIDAR_FRAME_TIMEOUT)){}
-  if (count == LIDAR_FRAME_TIMEOUT)  {
-    PrintCharArray("Time out!", 9, 1);
+  if (count == LIDAR_FRAME_TIMEOUT+1)  {
+    PrintCharArray("lid Time out!", 13, 1);
     return;
   }
-  //set the TX back to an output?
+
+  //signal to the other device
   PORTD |= (1 << PIND3);
   _NOP();
-  PrintCharArray(outgoing_frame_contents, OUTGOING_FRAME_SIZE, 0);
+  _NOP();
+  _NOP();
+  UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
+
+  //PrintCharArray(outgoing_frame_contents, OUTGOING_FRAME_SIZE, 0);
+  PrintCharArray("ABCDEFGHIJKLMNOPQRS", OUTGOING_FRAME_SIZE, 1);
+
+  UCSR0B = (1<<RXEN0)|(1<<RXCIE0);
+  sei();
+  _NOP();
+  _NOP();
+  _NOP();
   PORTD &= !(1 << PIND3);
 }
 
@@ -67,7 +80,7 @@ int main(void){
   //set the TXD as an input when not sending
   //set up PD3 and PD4 as connection to the main arduino one as an output and the other as an input
   DDRD |= (1 << DDD3);//PD3 as output
-  DDRD &= !((1 << DDD4) | (1 << DDD1));//PD4 and PD1 as an input
+  PORTD &= !(1 << PIND3);// turn off PD3
 
   sei();
   UART_Init(MYUBRR);
@@ -83,7 +96,6 @@ int main(void){
 #ifdef PRINT_SPEED
       PrintSpeed();
 #endif
-
       //repackage the lidar frame and send it over UART
       //replace the start character with an l
       outgoing_frame_contents[0] = 'l';
