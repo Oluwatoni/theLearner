@@ -19,7 +19,7 @@ int readEncoderData(){
     counts = c[0] * -1;
   else
     counts = 0;
-  
+
   return counts;
 }
 
@@ -39,6 +39,7 @@ void speed_control(int encoder_ticks){
 
   Car.Instruct(steering, Output);
 
+/*
   msg ="z,";
   msg.concat(Setpoint);
   msg.concat(",");
@@ -50,5 +51,6 @@ void speed_control(int encoder_ticks){
 #ifdef PRINT_DATA
   Serial.println(msg);
 #endif
+*/
 }
 

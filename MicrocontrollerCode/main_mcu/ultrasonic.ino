@@ -10,11 +10,11 @@ void ultrasonicRead1(){
   //beginning of first wave
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);       // The TinyWire library only allows for one byte to be requested at a time
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   Wire.read();
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);       // The TinyWire library only allows for one byte to be requested at a time
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   Wire.read();
 
   temp = millis();
@@ -27,7 +27,7 @@ void ultrasonicRead1(){
 
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   raw_distance[1] = Wire.read();
   
   //MCU2
@@ -55,7 +55,7 @@ void ultrasonicRead2(){
 
   //MCU1
   Wire.requestFrom(MCU1_I2C, 1);
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   raw_distance[4] = Wire.read();
   //end of second wave of sensor data
 
@@ -75,7 +75,7 @@ void ultrasonicRead3(){
     delay((temp + ULTRASONIC_DELAY) - now);
   //MCU2
   Wire.requestFrom(MCU2_I2C, 1);
-  while (Wire.available() == 0)  ;
+  while (Wire.available() == 0);
   raw_distance[6] = Wire.read();
   //end of third wave of sensor data
 }

@@ -38,7 +38,6 @@
 #define KI 30.0
 #define KD 0.0
 
-
 byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored
 uint8_t unfiltered_ultrasonic_data[SONAR_NUM][FILTER_ARRAY_SIZE];
 uint8_t last_measurement[SONAR_NUM];
@@ -67,8 +66,8 @@ void setup() {
   Wire.begin();
   Imu.Setup();
   Car.Setup();
-  pinMode(A0, INPUT);
-  pinMode(A1, INPUT);
+  pinMode(A0, INPUT);//BROWN
+  pinMode(A1, OUTPUT);//BLUE
   Serial.begin(115200);
   myPID.SetMode(AUTOMATIC);
   myPID.SetOutputLimits(-255, 255);
@@ -85,20 +84,20 @@ unsigned long temp = 0, now  = 0;
 void loop() {
   if (time_counter == 5) {
     time_counter = 0;
-    sensor_clock.requestTime();
+    //sensor_clock.requestTime();
   }
   sendImuData();
-  sendEncData();
   delay(5);
+  sendImuData();
   sendUltrasonicData1();
-  sendImuData();
-  delay(5);
-  sendUltrasonicData2();
-  sendImuData();
   sendEncData();
   delay(5);
-  sendUltrasonicData3();
   sendImuData();
+  sendUltrasonicData2();
+  delay(5);
+  sendImuData();
+  sendUltrasonicData3();
+  sendEncData();
   time_counter++;
 }
 

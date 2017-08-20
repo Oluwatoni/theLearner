@@ -7,59 +7,64 @@ mean = (mean * f) + (1.0-f) * (1000.0/float(millis()-start));
 start = millis();
 Serial.println(mean,4);
 */
- String msg;
- 
+#define F_CPU 16000000
+#define TO_MILLISECONDS(x) (x)*(F_CPU / 1000)
+String msg;
+
+void UART_Transmit( unsigned char data ){
+  /* Wait for empty transmit buffer */
+  while ( !( UCSR0A & (1<<UDRE0)) );
+  /* Put data into buffer, sends the data */
+  UDR0 = data;
+}
+
+void PrintCharArray(char array[], uint8_t size, uint8_t newline){
+  for (uint8_t i = 0;i < size; i++)
+    UART_Transmit(*(array++));
+  if (newline){
+    //UART_Transmit('\r');
+    UART_Transmit('\n');
+  }
+}
+
+void sendData(String data){
+  int count = 0;
+  sensor_clock.updateTime();
+  msg = sensor_clock.appendTime(msg);
+  msg = appendChecksum(msg);
+  
+  //send the data
+  while ((digitalRead(A0)) && (count++ < TO_MILLISECONDS(1))){}
+  if (count > TO_MILLISECONDS(1)){
+    return;
+  }
+
+  PORTC |= (1 << PINC1);
+#ifdef PRINT_DATA
+   PrintCharArray("01234567", 8, 1);
+   Serial.flush();
+#endif
+  delayMicroseconds(200);
+  PORTC &= !(1 << PINC1);
+}
+
 void sendImuData(){
   Imu.UpdateIMU();
   sensor_clock.updateTime();
   msg ="i,";
   msg.concat(Imu.GetYaw());
-  msg.concat(",");
-  msg.concat(Imu.GetPitch());
-  msg.concat(",");
-  msg.concat(Imu.GetRoll());
-  msg.concat(",");
-  msg.concat(Imu.GetAccX());
-  msg.concat(",");
-  msg.concat(Imu.GetAccY());
-  msg.concat(",");
-  msg.concat(Imu.GetAccZ());
-  msg.concat(",");
-  msg.concat(Imu.GetGyroX());
-  msg.concat(",");
-  msg.concat(Imu.GetGyroY());
-  msg.concat(",");
   msg.concat(Imu.GetGyroZ());
-  msg.concat(",");
-  msg.concat(Imu.GetMagX());
-  msg.concat(",");
-  msg.concat(Imu.GetMagY());
-  msg.concat(",");
-  msg.concat(Imu.GetMagZ());
-  msg.concat(",");
   msg.concat(Car.GetBatteryLevel());
-  msg.concat(",");
-  msg = sensor_clock.appendTime(msg);
-  msg = appendChecksum(msg);
-#ifdef PRINT_DATA
-  Serial.println(msg);
-#endif
+  sendData(msg);
 }
 
 void sendEncData(){
   long start_timer, cnt;
   start_timer = micros();
-  msg ="e,";
+  msg ="e";
   cnt = readEncoderData();
   msg.concat(cnt);//X_axis
-  msg.concat(",");
-  sensor_clock.updateTime();
-  msg = sensor_clock.appendTime(msg);
-  msg = appendChecksum(msg);
-#ifdef PRINT_DATA
-  Serial.println(msg);
-#endif
-
+  sendData(msg);
   speed_control(cnt);
 }
 
@@ -75,11 +80,7 @@ void sendUltrasonicData1(){
   msg.concat(",");
   msg.concat(filtered_distance[2]);
   msg.concat(",");
-  msg = sensor_clock.appendTime(msg);
-  msg = appendChecksum(msg);
-#ifdef PRINT_DATA
-  Serial.println(msg);
-#endif
+  //sendData(msg);
 }
 
 void sendUltrasonicData2(){
@@ -92,11 +93,7 @@ void sendUltrasonicData2(){
   msg.concat(",");
   msg.concat(filtered_distance[4]);
   msg.concat(",");
-  msg = sensor_clock.appendTime(msg);
-  msg = appendChecksum(msg);
-#ifdef PRINT_DATA
-  Serial.println(msg);
-#endif
+  //sendData(msg);
 }
 
 void sendUltrasonicData3(){
@@ -111,9 +108,5 @@ void sendUltrasonicData3(){
   msg.concat(",");
   msg.concat(filtered_distance[6]);
   msg.concat(",");
-  msg = sensor_clock.appendTime(msg);
-  msg = appendChecksum(msg);
-#ifdef PRINT_DATA
-  Serial.println(msg);
-#endif
+  //sendData(msg);
 }
