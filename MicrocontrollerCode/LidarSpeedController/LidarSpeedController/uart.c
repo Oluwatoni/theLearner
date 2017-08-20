@@ -50,7 +50,7 @@ void PrintCharArray(char array[], uint8_t size, uint8_t newline){
   for (uint8_t i = 0;i < size; i++)
     UART_Transmit(*(array++));
   if (newline){
-    UART_Transmit('\r');
+    //UART_Transmit('\r');
     UART_Transmit('\n');
   }
   //waits for the data to finish being transmitted
@@ -74,22 +74,4 @@ uint16_t GetChecksum(char* data_frame){
   uint16_t checksum = (chk32 & 0x7FFF) + ( chk32 >> 15 ); //# wrap around to fit into 15 bits
   checksum = checksum & 0x7FFF; //# truncate to 15 bits
   return checksum;
-}
-
-ISR(USART_RX_vect){
-  cli();
-  static int frame_size_counter = 0;
-  char data = UDR0;
-  if (data == 0xFA){
-      frame_size_counter = 0;
-  }
-  if (frame_size_counter < INCOMING_FRAME_SIZE){
-    incoming_frame_contents[frame_size_counter++] = data;
-    if (frame_size_counter == INCOMING_FRAME_SIZE){
-      if (GetChecksum(incoming_frame_contents) == (((uint16_t)incoming_frame_contents[INCOMING_FRAME_SIZE-1] << 8) | (uint16_t)incoming_frame_contents[INCOMING_FRAME_SIZE-2])){
-        data_ready = 1;
-      }        
-    }
-  }      
-  sei();
 }

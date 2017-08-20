@@ -8,10 +8,55 @@
 #include <avr/io.h>
 #include <stddef.h>
 #include "uart.h"
+#include <util/delay.h>
+#include "string.h"
 
 #define _NOP() do { __asm__ __volatile__ ("nop"); } while (0)
 
+#define TO_MILLISEC(x) (x)*(F_CPU/1000)
 //#define DEBUG
+
+/* circular buffer ADT*/
+char* addToBuffer(){
+  while (buffer_mutex == 0){}
+  buffer_mutex = 0;
+  char* buffer = outgoing_frame_contents[buffer_index];
+  current_buffer_size++;
+  if (current_buffer_size >= MAX_BUFFER_SIZE){
+    current_buffer_size = MAX_BUFFER_SIZE;
+  }
+  buffer_index = (buffer_index + 1) %  MAX_BUFFER_SIZE;
+  buffer_mutex = 1;
+  return buffer;
+}
+
+char* removeFromBuffer(){
+  while (buffer_mutex == 0){}
+  buffer_mutex = 0;
+  if (current_buffer_size == 0)
+    return NULL;
+  char* buffer;
+  if (current_buffer_size != MAX_BUFFER_SIZE)
+    buffer = outgoing_frame_contents[mod((buffer_index - current_buffer_size), MAX_BUFFER_SIZE)];
+  else
+    buffer = outgoing_frame_contents[buffer_index];
+
+  current_buffer_size--;
+  buffer_index--;
+  if (buffer_index == -1)
+    buffer_index = MAX_BUFFER_SIZE - 1;
+  buffer_mutex = 1;
+  return buffer;
+}
+
+int mod(int a, int b){
+  if(b < 0) //you can check for b == 0 separately and do what you want
+  return mod(a, -b);
+  int ret = a % b;
+  if(ret < 0)
+  ret+=b;
+  return ret;
+}
 
 void SetupPwm(){
   DDRD |= (1 << DDD6);
@@ -39,72 +84,88 @@ char OutgoingChecksum(char* data, size_t size){
 
 void PrintSpeed(){
   printNumber((incoming_frame_contents[1]- 0xA0), 3);
-  UART_Transmit('  ');
+  UART_Transmit(' ');
   printNumber((int)rpm, 3);
   UART_Transmit('\r');
   UART_Transmit('\n');
 }
 
-void SendLidarFrame(){
+void SendLidarFrame(char* frame){
+  //repackage the lidar frame and send it over UART
+  //replace the start character with an l
+  frame[0] = 'l';
+  //extract the speed
+  rpm = (float)(((uint16_t)frame[3] << 8) | (uint16_t)frame[2]) / 64.0;
+  //remove the speed from the data
+  memmove(frame+2, frame+4, INCOMING_FRAME_SIZE-4);
+  //replace the checksum data
+  frame[OUTGOING_FRAME_SIZE-1] = OutgoingChecksum(frame , OUTGOING_FRAME_SIZE-1);
+  
   //Negotiate control of the Bluetooth TX
-
   uint32_t count = 0;
-  while((PIND & (1 << PIND4)) && (count++ < LIDAR_FRAME_TIMEOUT)){}
-  if (count == LIDAR_FRAME_TIMEOUT+1)  {
-    PrintCharArray("lid Time out!", 13, 1);
+  while((PIND & (1 << PIND4)) && (count++ < TO_MILLISEC(.5))){}
+  if (count > TO_MILLISEC(0.5))
     return;
-  }
 
   //signal to the other device
   PORTD |= (1 << PIND3);
-  _NOP();
-  _NOP();
-  _NOP();
-  UCSR0B = (1<<RXEN0)|(1<<TXEN0)|(1<<RXCIE0);
-
-  //PrintCharArray(outgoing_frame_contents, OUTGOING_FRAME_SIZE, 0);
-  PrintCharArray("ABCDEFGHIJKLMNOPQRS", OUTGOING_FRAME_SIZE, 1);
-
-  UCSR0B = (1<<RXEN0)|(1<<RXCIE0);
-  sei();
-  _NOP();
-  _NOP();
-  _NOP();
+  PrintCharArray(frame, OUTGOING_FRAME_SIZE, 1);
+  _delay_us(200);
   PORTD &= !(1 << PIND3);
 }
 
+ISR(USART_RX_vect){
+  static int frame_size_counter = 0;
+  static char* buffer_reference;
+  cli();
+  char data = UDR0;
+  if (data == 0xFA){
+    frame_size_counter = 0;
+  }
+  if (frame_size_counter < INCOMING_FRAME_SIZE){
+    incoming_frame_contents[frame_size_counter++] = data;
+    if (frame_size_counter == INCOMING_FRAME_SIZE){
+      if (GetChecksum(incoming_frame_contents) == (((uint16_t)incoming_frame_contents[INCOMING_FRAME_SIZE-1] << 8) | (uint16_t)incoming_frame_contents[INCOMING_FRAME_SIZE-2])){
+        //TODO Remove the following line
+        strncpy(incoming_frame_contents, "0123456789ABCDEFGHIJKL", INCOMING_FRAME_SIZE);
+        buffer_reference = addToBuffer();
+        strncpy(buffer_reference, incoming_frame_contents, INCOMING_FRAME_SIZE);
+      }
+    }
+  }
+  sei();
+}
+
 int main(void){
-  data_ready = 0;
+  current_buffer_size = 0;
+  buffer_index = 0;
+  buffer_mutex = 1;
+  memset(outgoing_frame_contents, 0, MAX_BUFFER_SIZE * INCOMING_FRAME_SIZE);
   rpm = 0;
   int set = 225;
-  //set the TXD as an input when not sending
   //set up PD3 and PD4 as connection to the main arduino one as an output and the other as an input
   DDRD |= (1 << DDD3);//PD3 as output
   PORTD &= !(1 << PIND3);// turn off PD3
 
-  sei();
+  char frame[INCOMING_FRAME_SIZE];
+  char* buffer_reference;
   UART_Init(MYUBRR);
+  sei();
+  PrintCharArray("Started", 7, 1);
+  
   SetupPwm();
   SetSpeed(set);
   while (1){
-    if (data_ready){
+    while (current_buffer_size){
+      buffer_reference = removeFromBuffer();
       cli();
-      memcpy(outgoing_frame_contents, incoming_frame_contents, OUTGOING_FRAME_SIZE);
+      strncpy(frame, buffer_reference, INCOMING_FRAME_SIZE);
       sei();
-      data_ready = 0;
-
-#ifdef PRINT_SPEED
-      PrintSpeed();
-#endif
-      //repackage the lidar frame and send it over UART
-      //replace the start character with an l
-      outgoing_frame_contents[0] = 'l';
-      //replace the checksum data
-      outgoing_frame_contents[OUTGOING_FRAME_SIZE-1] = OutgoingChecksum(outgoing_frame_contents, OUTGOING_FRAME_SIZE-1);
-
-      SendLidarFrame();
-      //TODO after every encoder speed update correct the lidar motor output with a PID
-      rpm = (float)(((uint16_t)outgoing_frame_contents[3] << 8) | (uint16_t)outgoing_frame_contents[2]) / 64.0;
+      SendLidarFrame(frame);
     }
+     //TODO after every encoder speed update correct the lidar motor output with a PID
+    #ifdef PRINT_SPEED
+    PrintSpeed();
+    #endif
   }
 }

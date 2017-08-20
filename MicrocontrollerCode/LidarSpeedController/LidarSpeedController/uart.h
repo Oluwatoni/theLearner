@@ -15,9 +15,9 @@
 #define MYUBRR FOSC/16UL/BAUD-1UL
 
 #define INCOMING_FRAME_SIZE 22
-#define OUTGOING_FRAME_SIZE 21
+#define OUTGOING_FRAME_SIZE 19
 
-#define LIDAR_FRAME_TIMEOUT 20000
+#define MAX_BUFFER_SIZE 3
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -25,14 +25,19 @@
 #include <math.h>
 
 volatile char incoming_frame_contents[INCOMING_FRAME_SIZE];
-volatile char outgoing_frame_contents[INCOMING_FRAME_SIZE];
-volatile int data_ready;
 volatile float rpm;
+
+/* circular buffer ADT*/
+volatile char outgoing_frame_contents[MAX_BUFFER_SIZE][INCOMING_FRAME_SIZE];
+volatile int current_buffer_size;
+volatile int buffer_index;
+volatile int buffer_mutex;
 
 void UART_Init( unsigned int);
 void UART_Transmit( unsigned char data );
 unsigned char UART_Receive( void );
 void PrintCharArray(char array[], uint8_t size, uint8_t newline);
 void printNumber(uint16_t value, uint8_t digits);
+uint16_t GetChecksum(char* data_frame);
 
 #endif /* UART_H_ */
