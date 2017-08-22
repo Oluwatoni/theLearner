@@ -27,7 +27,7 @@ void UART_Transmit( unsigned char data ){
   UDR0 = data;
 }
 
-void printNumber(uint16_t value, uint8_t digits){
+void PrintNumber(uint16_t value, uint8_t digits){
   uint16_t remainder;
   //value = (uint16_t) value;
   while(digits--){
@@ -55,23 +55,4 @@ void PrintCharArray(char array[], uint8_t size, uint8_t newline){
   }
   //waits for the data to finish being transmitted
   while(!(UCSR0A & ((1 << TXC0)))){}
-}
-
-uint16_t GetChecksum(char* data_frame){
-  //Compute and return the checksum as an int
-  //data -- list of 20 bytes (as ints), in the order they arrived in.
-  //group the data by word, little-endian
-  uint16_t data_list[10];
-  for (int i = 0; i < 10; i++)
-    data_list[i] = ( data_frame[2*i] + (data_frame[2*i+1]<<8) );
-
-  //# compute the checksum on 32 bits
-  uint32_t chk32 = 0;
-  for (int i = 0; i < 10; i++)
-    chk32 = (chk32 << 1) + data_list[i];
-
-  //return a value wrapped around on 15bits, and truncated to still fit into 15 bits
-  uint16_t checksum = (chk32 & 0x7FFF) + ( chk32 >> 15 ); //# wrap around to fit into 15 bits
-  checksum = checksum & 0x7FFF; //# truncate to 15 bits
-  return checksum;
 }
