@@ -18,3 +18,4 @@ Todo:
 - implement an exploration algorithm (Frontier based? taking into account the amount of information that could be obtained from each frontier)
 - implement a globalish path planner for frontier navigation
 - move code to a raspberry pi?
+- build or find a simulation of this robot for some of the higher level algorithm testing(MATLAB vs Gazebo)?
