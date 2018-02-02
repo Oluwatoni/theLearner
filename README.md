@@ -16,6 +16,7 @@ Todo:
 - turn off motion commands if nothing was recieved recently(define recently)
 - use scan matching to relocalize or detect and track the position of features in the map?(EKF-SLAM)
 - implement an exploration algorithm (Frontier based? taking into account the amount of information that could be obtained from each frontier)
-- implement a globalish path planner for frontier navigation
+  - This can be contain a rosaction for navigation to the goal postition
+  - implement a globalish path planner for frontier navigation
 - move code to a raspberry pi?
 - build or find a simulation of this robot for some of the higher level algorithm testing(MATLAB vs Gazebo)?
