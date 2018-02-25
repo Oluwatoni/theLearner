@@ -6,6 +6,7 @@ It is currently capable of mapping with known poses. The next goal is indoor exp
 Todo:
 
 - move the embedded code to the periodic scheduler
+- change the commands to a twist style message
 - switch imus
 - swith the steering servo and design a better steering mechanism
 - characterize the lidar and tune a closed loop controller
