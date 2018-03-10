@@ -1,8 +1,8 @@
 #include "Cristians_clock.h"
 Clock:: Clock(){
-  second = 0;
-  microsecond = 0;
-  last_update = micros();
+  second_ = 0;
+  microsecond_ = 0;
+  last_update_ = micros();
 }
 
 //request time to set up the internal clock
@@ -14,31 +14,31 @@ void Clock:: requestTime(){
   request_sent = micros();
 }
 
-void Clock:: setTime( uint32_t init_second, uint32_t init_microsecond){
-  second = init_second;
-  microsecond = init_microsecond;
-  last_update = micros();
+void Clock:: setTime( uint32_t init_second, uint32_t init_microsecond_){
+  second_ = init_second;
+  microsecond_ = init_microsecond_;
+  last_update_ = micros();
 #ifdef DEBUG
-  Serial.println(second);
-  Serial.println(microsecond);
+  Serial.println(second_);
+  Serial.println(microsecond_);
 #endif
 }
 
 void Clock:: updateTime(){
-  long current_update = micros() - last_update;
-  microsecond += current_update;
+  long current_update = micros() - last_update_;
+  microsecond_ += current_update;
   
-  if (microsecond >= 1000000){
-    microsecond %= 1000000;
-    second++;
+  if (microsecond_ >= 1000000){
+    microsecond_ %= 1000000;
+    second_++;
   } 
-  last_update = micros();
+  last_update_ = micros();
 }
 
 String Clock:: appendTime(String msg){
-  msg.concat(second);
+  msg.concat(second_);
   msg.concat(",");
-  msg.concat(microsecond);
+  msg.concat(microsecond_);
   msg.concat(",");
   return msg;
 }

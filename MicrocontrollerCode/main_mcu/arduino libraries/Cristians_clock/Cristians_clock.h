@@ -4,12 +4,11 @@
 
 #include <inttypes.h>
 
-class Clock
-{
+class Clock{
   private:
-    uint32_t second;
-    uint32_t microsecond;
-    uint64_t last_update;
+    uint32_t second_;
+    uint32_t microsecond_;
+    uint64_t last_update_;
   public:
     Clock();
     long request_sent;

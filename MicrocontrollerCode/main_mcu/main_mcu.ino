@@ -1,119 +1,91 @@
 /*
   Oluwatoni Ogunmade
   funmitoni2@yahoo.co.uk
-  inspiration below.
-  http://projectsfromtech.blogspot.com/2014/01/i2c-hc-sr04-sonar-module-attiny85-i2c.html
-*/
+*/  
 
-//#define YPR_ENABLE
-
-#include <Wire.h>
-#include <NewPing.h>
-#include <Servo.h>
-#include <avr/interrupt.h>
-#include <Cristians_clock.h>
-#include <IMU.h>//TODO remove
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
-#include <PID_v1.h>
-
-#include <Learner_car.h>
+#include <Wire.h>
+#include <avr/interrupt.h>
+#include <Cristians_clock.h>
+#include "TaskScheduler.h"
+#include <learner_car.h>
+#include <encoder.h>
+#include <ultrasonic_array.h>
 
 #define UART_RX_HARDWARE_ENABLE
-
-//#define DEBUG
-//defines for the ultrasonic sensors
-#define MCU1_I2C 1
-#define MCU2_I2C 2
-#define SONAR_NUM 7
-#define FILTER_ARRAY_SIZE 3
-#define MAX_DISTANCE 250 //in cm
-#define ULTRASONIC_DELAY 18
-#define SENSOR_WAVE_DELAY 20
-#define WHEEL_CIRCUM 0.187
-#define TICKS_PER_REVOLUTION 40.0
-#define ENCODER_ADDRESS 0x07
 #define PRINT_DATA
-#define KP 800.0
-#define KI 30.0
-#define KD 0.0
+#define FREQ_TO_MS(X) ((1/X) * 1000)
+#define TO_MILLISECONDS(x) (x)*(F_CPU / 1000)
 
-byte raw_distance[SONAR_NUM] = {};                   // Where the range data is stored
-uint8_t unfiltered_ultrasonic_data[SONAR_NUM][FILTER_ARRAY_SIZE];
-uint8_t last_measurement[SONAR_NUM];
-uint8_t filtered_distance[SONAR_NUM];
-byte start_filter = 0;
-int time_counter = 5;
-double Input = 0, Output = 0, Setpoint = 0;
+const int _TASK_SLEEP_ON_IDLE_RUN  = 50;
+const int IMU_UPDATE_FREQ = 50;
 
-IMU Imu(75);//frequency in Hz
-Learner_car Car;
+Scheduler ts;
+/* tasks to be run
+- ultrasonic array
+- IMU
+- car controller (PID and regular controls)
+- motor easing
+- time request
+*/
+
+//callbacks
+void SendIMUDataCb();
+void SendUltrasonicDataCb();
+void UpdateCarCb();
+void MotorEasingCb();
+void TimeRequestCb();
+
+LearnerCar car;
 Clock sensor_clock;
-PID myPID(&Input, &Output, &Setpoint, KP, KI, KD, DIRECT);
+UltrasonicArray ultrasonic_sensors;
+Encoder encoder;
+Adafruit_BNO055 IMU = Adafruit_BNO055();
 
-// Sensor object array.
-NewPing sonar[SONAR_NUM - 4] = {
-  NewPing(7, 7, MAX_DISTANCE), //ultra 5 // Each sensor's trigger pin, echo pin, and max distance to ping.
-  NewPing(A2, A2, MAX_DISTANCE),//ultra 7
-  NewPing(2, 2, MAX_DISTANCE)//ultra 6
-};
+Task tIMU(FREQ_TO_MS(IMU_UPDATE_FREQ), TASK_FOREVER, &SendIMUDataCb, &ts, false);
 
 char input_string[40];         // a string to hold incoming data
 uint8_t input_string_index = 0;
 boolean input_string_complete = false;  // whether the string is complete
 
 void setup() {
-  Wire.begin();
-  Imu.Setup();
-  Car.Setup();
+  
+  //lidar negotiation pins
   pinMode(A0, INPUT);//BROWN
   pinMode(A1, OUTPUT);//BLUE
   Serial.begin(115200);
-  myPID.SetMode(AUTOMATIC);
-  myPID.SetOutputLimits(-255, 255);
   sei();
-  for (int i = 0; i < SONAR_NUM; i++) {
-    filtered_distance[i] = 0;
-    raw_distance[i] = 0;
-    for (int j = 0; j < FILTER_ARRAY_SIZE; j++)
-      unfiltered_ultrasonic_data[i][j] = 0;
+
+  car.Setup();
+  encoder.Setup();
+  ultrasonic_sensors.Setup();
+    Serial.print("Hello World");
+  if(!IMU.begin()){
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    //while(1);
   }
+
+  //enable the tasks to be run
+  tIMU.enable();
 }
-unsigned long temp = 0, now  = 0;
 
 void loop() {
-  if (time_counter == 5) {
-    time_counter = 0;
-    //sensor_clock.requestTime();
-  }
-  sendImuData();
-  delay(5);
-  sendImuData();
-  sendUltrasonicData1();
-  sendEncData();
-  delay(5);
-  sendImuData();
-  sendUltrasonicData2();
-  delay(5);
-  sendImuData();
-  sendUltrasonicData3();
-  sendEncData();
-  time_counter++;
+  //sensor_clock.requestTime();
+  ts.execute();
 }
 
-int16_t steering = 0;
 //handles RC msgs
 void extractData(char * msg, uint8_t msg_size) {
   int16_t state = 0, temp_steering, temp_throttle, temp_stop, checksum_size = 0, checksum;
   String raw_steering = "", raw_throttle = "", raw_stop = "", raw_checksum = "";
   char temp[15];
 
-  for (int i = 0; i < msg_size; i++)
-  {
+  for (int i = 0; i < msg_size; i++) {
     if (*msg == ',')
       state++;
-    switch (state)
-    {
+    switch (state) {
       case 0:
         //r before the first comma
         temp[checksum_size++] = *msg;
@@ -144,23 +116,21 @@ void extractData(char * msg, uint8_t msg_size) {
   }
   //temp[checksum_size++] = ',';
 
-  if ((uint8_t)generateChecksum(temp, checksum_size) == raw_checksum.toInt())
-  {
+  if ((uint8_t)generateChecksum(temp, checksum_size) == raw_checksum.toInt()){
 #ifdef DEBUG
     Serial.println(raw_steering);
     Serial.println(raw_throttle);
     Serial.println(raw_stop);
 #endif
 
-    steering = raw_steering.toInt();
-    Setpoint = (float)(raw_throttle.toInt() / 110.39);
+    temp_steering = raw_steering.toInt();
+    temp_throttle = raw_throttle.toInt();
+    //Setpoint = (float)(raw_throttle.toInt() / 110.39);
     temp_stop = raw_stop.toInt();
   }
 #ifdef DEBUG
-  else
-  {
-    for (int i = 0; i < checksum_size; i++)
-    {
+  else{
+    for (int i = 0; i < checksum_size; i++){
       Serial.print(temp[i]);
     }
     Serial.println();
@@ -177,12 +147,10 @@ void recieveTime(char * msg, uint8_t msg_size) {
   String raw_second = "", raw_microsecond = "", raw_checksum = "";
   char temp[40];
 
-  for (int i = 0; i < msg_size; i++)
-  {
+  for (int i = 0; i < msg_size; i++){
     if (*msg == ',')
       state++;
-    switch (state)
-    {
+    switch (state){
       case 0:
         //t before the first comma
         temp[checksum_size++] = *msg;
@@ -205,8 +173,7 @@ void recieveTime(char * msg, uint8_t msg_size) {
     msg++;
   }
 
-  if ((uint8_t)generateChecksum(temp, checksum_size) == raw_checksum.toInt())
-  {
+  if ((uint8_t)generateChecksum(temp, checksum_size) == raw_checksum.toInt()){
     long recieved_time = micros();
 #ifdef DEBUG
     Serial.println("Valid time message");
@@ -217,16 +184,14 @@ void recieveTime(char * msg, uint8_t msg_size) {
     int_microsecond = raw_microsecond.toInt();
 
     int_microsecond = int_microsecond;
-    if (int_microsecond > 1000000)
-    {
+    if (int_microsecond > 1000000){
       int_microsecond %= 1000000;
       int_second += int_microsecond / 1000000;
     }
     sensor_clock.setTime(int_second, int_microsecond);
   }
 #ifdef DEBUG
-  else
-  {
+  else{
     Serial.println("Invalid time message");
     for (int i = 0; i < checksum_size; i++)
       Serial.print(temp[i]);
@@ -240,12 +205,10 @@ void recieveTime(char * msg, uint8_t msg_size) {
 }
 
 //Handle incoming commands
-
-ISR(USART_RX_vect) {
+ISR(USART_RX_vect){
   cli();
   char temp = UDR0;
-  if (temp == '\n')
-  {
+  if (temp == '\n'){
     input_string[input_string_index] = temp;
     sei();
     if (input_string[0] == 'r')
@@ -255,8 +218,7 @@ ISR(USART_RX_vect) {
     input_string_index = 0;
     input_string_complete = true;
   }
-  else
-  {
+  else{
     input_string_complete = false;
     input_string[input_string_index] = temp;
     input_string_index++;
