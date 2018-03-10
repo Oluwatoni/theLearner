@@ -6,8 +6,12 @@ It is currently capable of mapping with known poses(with the sonar sensor). The 
 Todo:
 
 - move the embedded code to the periodic scheduler
+- change the commands to a twist style message
 - switch imus
 - swith the steering servo and design a better steering mechanism
+- characterize the lidar and tune a closed loop controller
+- characterize the velocity and tune a closed loop controller
+- add motor easing to the mix
 - complete the sonar->lidar transition for mapping
 - 3d print new enclosures
 - buy a neat container for transporting the robot
