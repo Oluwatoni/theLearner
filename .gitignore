@@ -48,6 +48,8 @@ Temporary Items
 
 #temp files
 *.py~
+*.cpp~
+*.h~
 
 #Visual studio
 *.o
