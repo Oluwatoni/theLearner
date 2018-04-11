@@ -1,3 +1,6 @@
+#include "Arduino.h"
+#include "main_mcu.hpp"
+
 void UART_Transmit( unsigned char data ){
   /* Wait for empty transmit buffer */
   while ( !( UCSR0A & (1<<UDRE0)) );
@@ -15,11 +18,11 @@ void PrintCharArray(char array[], uint8_t size, uint8_t newline){
 }
 
 void sendData(String data){
-  String msg;
+  String msg = data;
   int count = 0;
 
   sensor_clock.updateTime();
-  msg = sensor_clock.appendTime(msg);
+  //msg = sensor_clock.appendTime(msg);
   msg = appendChecksum(msg);
   
   //send the data
@@ -30,13 +33,12 @@ void sendData(String data){
 
   PORTC |= (1 << PINC1);
 #ifdef PRINT_DATA
-   PrintCharArray("01234567", 8, 1);
+   PrintCharArray(msg.c_str(), msg.length(), 1);
    Serial.flush();
 #endif
   delayMicroseconds(200);
   PORTC &= !(1 << PINC1);
 }
-
 
 void SendIMUDataCb(){
   String msg;
@@ -47,14 +49,37 @@ void SendIMUDataCb(){
   sensor_clock.updateTime();
   msg ="i,";
   msg.concat(euler.x());
+  msg.concat(',');
   msg.concat(euler.z());
-  //msg.concat(car.GetBatteryLevel());
+  //sendData(msg);
+}
+
+void SendBatteryLevelCb(){
+  String msg;
+  msg ="b,";
+  msg.concat(car.GetBatteryLevel());
   sendData(msg);
 }
 
-void SendBatteryLevel(){
-  
+void UltrasonicDataCb(){
+  static int callback_wave_ = 0;
+  switch(callback_wave_){
+    case 0:
+      ultrasonic_sensors.ReadFirstWave();
+      break;
+    case 1:
+      ultrasonic_sensors.ReadSecondWave();
+      break;
+    case 2:
+      ultrasonic_sensors.ReadThirdWave();
+      break;
+  }
+  callback_wave_++;
+  if (callback_wave_ >= 3){
+    callback_wave_ = 0;
+  }
 }
+
 /*
 void sendEncData(){
   String msg;
@@ -67,46 +92,4 @@ void sendEncData(){
   sendData(msg);
   speed_control(cnt);
 }
-
-void sendUltrasonicData1(){
-  String msg;
-
-  ultrasonicRead1();
-  sensor_clock.updateTime();
-  msg ="u,";
-  msg.concat(filtered_distance[0]);
-  msg.concat(",");
-  msg.concat(filtered_distance[1]);
-  msg.concat(",");
-  msg.concat(filtered_distance[2]);
-  msg.concat(",");
-  //sendData(msg);
-}
-
-void sendUltrasonicData2(){
-  String msg;
-
-  ultrasonicRead2();
-  sensor_clock.updateTime();
-  msg ="v,";
-  msg.concat(filtered_distance[3]);
-  msg.concat(",");
-  msg.concat(filtered_distance[4]);
-  msg.concat(",");
-  //sendData(msg);
-}
-
-void sendUltrasonicData3(){
-  String msg;
-  long start_timer;
-
-  start_timer = micros();
-  ultrasonicRead3();
-  sensor_clock.updateTime();
-  msg ="w,";
-  msg.concat(filtered_distance[5]);
-  msg.concat(",");
-  msg.concat(filtered_distance[6]);
-  msg.concat(",");
-  //sendData(msg);
-}*/
+*/

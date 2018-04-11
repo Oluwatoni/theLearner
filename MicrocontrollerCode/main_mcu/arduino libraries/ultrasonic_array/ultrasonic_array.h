@@ -31,8 +31,9 @@ class UltrasonicArray{
         UltrasonicArray();
         bool Setup();
         uint8_t GetUltrasonicDelay();
-        void ReadFirstWave(uint8_t &dist_1, uint8_t &dist_2, uint8_t &dist_3);
-        void ReadSecondWave(uint8_t &dist_1, uint8_t &dist_2);
-        void ReadThirdWave(uint8_t &dist_1, uint8_t &dist_2);
+        void ReadFirstWave();
+        void ReadSecondWave();
+        void ReadThirdWave();
+        void UltrasonicDataCb();
 };
 #endif

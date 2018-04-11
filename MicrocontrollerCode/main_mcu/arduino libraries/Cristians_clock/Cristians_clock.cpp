@@ -36,24 +36,24 @@ void Clock:: updateTime(){
 }
 
 String Clock:: appendTime(String msg){
+  msg.concat(",");
   msg.concat(second_);
   msg.concat(",");
   msg.concat(microsecond_);
-  msg.concat(",");
   return msg;
 }
 
 String appendChecksum(String msg){
-  char buffer[msg.length()];
-  msg.toCharArray(buffer, msg.length());
-  msg.concat((uint8_t)generateChecksum(buffer, msg.length()));
+  msg.concat(',');
+  msg.concat((uint8_t)generateChecksum(msg.c_str(), msg.length()));
   return msg;
 }
 
 char generateChecksum(char data[], char sizeOfData){
   uint32_t sum = 0;
-  while (sizeOfData)
+  while (sizeOfData){
     sum += (uint8_t)data[--sizeOfData];
+  }
   sum += 44;
   return (sum % 255);
 }

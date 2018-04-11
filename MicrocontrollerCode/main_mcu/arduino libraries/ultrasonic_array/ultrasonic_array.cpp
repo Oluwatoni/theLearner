@@ -60,7 +60,7 @@ void UltrasonicArray::FilterUltrasonicData(uint8_t first_index, uint8_t last_ind
   }
 }
 
-void UltrasonicArray::ReadFirstWave(uint8_t &dist_1, uint8_t &dist_2, uint8_t &dist_3){
+void UltrasonicArray::ReadFirstWave(){
   long temp, now;
   Wire.beginTransmission(MCU1_I2C);
   Wire.write(56);                            //exotic byte to sync the communication with MCU2
@@ -99,12 +99,18 @@ void UltrasonicArray::ReadFirstWave(uint8_t &dist_1, uint8_t &dist_2, uint8_t &d
   raw_distance_[2] = Wire.read();
   //end of first wave of sensor data
   FilterUltrasonicData(0, 2);
-  dist_1 = filtered_distance_[0];
-  dist_2 = filtered_distance_[1];
-  dist_3 = filtered_distance_[2];
+  //dist_1 = filtered_distance_[0];
+  //dist_2 = filtered_distance_[1];
+  //dist_3 = filtered_distance_[2];
+  Serial.print("u1,");
+  Serial.print(filtered_distance_[0]);
+  Serial.print(',');
+  Serial.print(filtered_distance_[1]);
+  Serial.print(',');
+  Serial.println(filtered_distance_[2]);
 }
 
-void UltrasonicArray::ReadSecondWave(uint8_t &dist_1, uint8_t &dist_2){
+void UltrasonicArray::ReadSecondWave(){
   long temp, now;
   //beginning of second wave
   //MCU1
@@ -115,8 +121,7 @@ void UltrasonicArray::ReadSecondWave(uint8_t &dist_1, uint8_t &dist_2){
   temp = millis();
   raw_distance_[3] = sonar_[0]->ping_cm();// ultrasonic sensor 5
   now  = millis();
-  if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0)
-  {
+  if ((now - temp) < ULTRASONIC_DELAY && (int)(now - temp) > 0){
     delay((temp + ULTRASONIC_DELAY) - now);
   }
 
@@ -126,11 +131,15 @@ void UltrasonicArray::ReadSecondWave(uint8_t &dist_1, uint8_t &dist_2){
   raw_distance_[4] = Wire.read();
   //end of second wave of sensor data
   FilterUltrasonicData(3, 4);
-  dist_1 = filtered_distance_[3];
-  dist_2 = filtered_distance_[4];
+  //dist_1 = filtered_distance_[3];
+  //dist_2 = filtered_distance_[4];
+  Serial.print("u2,");
+  Serial.print(filtered_distance_[3]);
+  Serial.print(',');
+  Serial.println(filtered_distance_[4]);
 }
 
-void UltrasonicArray::ReadThirdWave(uint8_t &dist_1, uint8_t &dist_2){
+void UltrasonicArray::ReadThirdWave(){
   long temp, now;
   //beginning of third wave
   //MCU2
@@ -149,6 +158,10 @@ void UltrasonicArray::ReadThirdWave(uint8_t &dist_1, uint8_t &dist_2){
   raw_distance_[6] = Wire.read();
   //end of third wave of sensor data
   FilterUltrasonicData(5, 6);
-  dist_1 = filtered_distance_[5];
-  dist_2 = filtered_distance_[6];
+  Serial.print("u3,");
+  Serial.print(filtered_distance_[5]);
+  Serial.print(',');
+  Serial.println(filtered_distance_[6]);
+  //dist_1 = filtered_distance_[5];
+  //dist_2 = filtered_distance_[6];
 }
