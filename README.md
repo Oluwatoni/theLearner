@@ -5,6 +5,7 @@ It is currently capable of mapping with known poses(with the sonar sensor). The 
 
 Todo(in no particular order):
 
+- remove the side and rear ultrasonic sensors
 - move the embedded code to the periodic scheduler
 - change the commands to a steering angle and a linear velocity magnitude
 - add a position server to the kalman filter node? or just get the tf between the points of interest
