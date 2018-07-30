@@ -1,7 +1,7 @@
 # Imọ
-The learner is a mobile robotics platform built to learn mapping, localization and path planning. The learner sports seven ultrasonic sensors, an encoder and a 9 DOF IMU.
+Imọ is a mobile robotics platform built to learn mapping, localization and path planning. The learner sports seven ultrasonic sensors, an encoder and a 9 DOF IMU.
 
-It is currently capable of mapping with known poses(with the sonar sensor). The next goal is indoor exploration while SLAMing.
+It is currently capable of mapping. The next goal is indoor exploration while SLAMing.
 
 Todo(in no particular order):
 
